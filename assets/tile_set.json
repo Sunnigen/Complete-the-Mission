@@ -1,0 +1,56 @@
+{
+  "default": {
+    "name": "default",
+    "char": " ",
+    "color": [0, 0, 100],
+    "breakable": false
+  },
+  "light_wall": {
+    "name": "Wall",
+    "char": "#",
+    "color": [0, 0, 100],
+    "breakable": false
+  },
+  "light_ground": {
+    "name": "Floor",
+    "char": ".",
+    "color": [0, 18, 50],
+    "breakable": false
+  },
+  "dark_wall": {
+    "name": "Wall",
+    "char": " ",
+    "color": [0, 0, 100],
+    "breakable": false
+  },
+  "dark_ground": {
+    "name": "Floor",
+    "char": " ",
+    "color": [50, 50, 150],
+    "breakable": false
+  },
+  "dark_center": {
+    "name": "Center",
+    "char": "$",
+    "color": [60, 60, 155],
+    "breakable": false
+  },
+  "light_center": {
+    "name": "Center",
+    "char": "$",
+    "color": [10, 18, 50],
+    "breakable": false
+  },
+  "light_hall_way": {
+    "name": "Hall Way",
+    "char": "~",
+    "color": [0, 18, 50],
+    "breakable": false
+  },
+  "dark_hall_way": {
+    "name": "Hall Way",
+    "char": "~",
+    "color": [50, 50, 150],
+    "breakable": false
+  }
+}

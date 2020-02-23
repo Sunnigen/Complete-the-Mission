@@ -1,0 +1,25 @@
+{
+  "orc": {
+    "name": "Orc",
+    "char": "o",
+    "color": [64, 128, 64],
+    "hp": 20,
+    "def": 1,
+    "att": 4,
+    "xp": 35,
+    "spawn_chance": [[80, 1]],
+    "mob_level": 1
+  },
+
+  "troll": {
+    "name": "Troll",
+    "char": "T",
+    "color": [0, 128, 0],
+    "hp": 30,
+    "def": 2,
+    "att": 8,
+    "xp": 100,
+    "spawn_chance": [[15, 3], [30, 5], [60, 7]],
+    "mob_level": 1
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "healing_potion": {
+    "name": "Healing Potion",
+    "char": "!",
+    "color": [127, 0, 255],
+    "type": "consumable",
+    "equippable": false,
+    "amount": 40,
+    "use_function": "heal",
+    "spawn_chance": 35,
+    "item_level": 1
+  },
+
+  "fireball_scroll": {
+    "name": "Fireball Scroll",
+    "char": "#",
+    "color": [255, 0, 0],
+    "type": "consumable",
+    "equippable": false,
+    "amount": 0,
+    "damage": 25,
+    "radius": 3,
+    "range": 0,
+    "use_function": "cast_fireball",
+    "targeting":true,
+    "targeting_message": "Left-click a target area for the fireball, or right-click to cancel.",
+    "spawn_chance": 25,
+    "item_level": 6
+  },
+
+  "lightning_scroll": {
+    "name": "Lightning Scroll",
+    "char": "#",
+    "color": [255, 255, 0],
+    "type": "consumable",
+    "equippable": false,
+    "damage": 40,
+    "amount": 0,
+    "radius": 0,
+    "range": 5,
+    "use_function": "cast_lightning",
+    "targeting": false,
+    "spawn_chance": 25,
+    "item_level": 4
+  },
+
+  "confusion_scroll":{
+    "name": "Confusion Scroll",
+    "char": "#",
+    "color":[255, 115, 185],
+    "type": "consumable",
+    "equippable": false,
+    "damage": 0,
+    "amount": 0,
+    "range": 0,
+    "use_function": "cast_confuse",
+    "targeting": true,
+    "targeting_message": "Left-click an enemy to confuse it, or right-click to cancel.",
+    "spawn_chance": 10,
+    "item_level": 2
+  },
+
+  "iron_sword": {
+    "name": "Iron Sword",
+    "char": "/",
+    "color": [0, 191, 255],
+    "type": "equip",
+    "equippable": true,
+    "attack": 3,
+    "defense": 0,
+    "hp": 0,
+    "slot": "EquipmentSlots.MAIN_HAND",
+    "spawn_chance": 5,
+    "item_level": 4
+  },
+
+  "iron_shield":{
+    "name": "Iron Shield",
+    "char": "[",
+    "color":[128, 64, 0],
+    "type": "equip",
+    "equippable": true,
+    "attack": 0,
+    "defense": 1,
+    "hp": 0,
+    "slot": "EquipmentSlots.OFF_HAND",
+    "spawn_chance": 15,
+    "item_level": 4
+  }
+}
