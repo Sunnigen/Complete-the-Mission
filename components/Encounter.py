@@ -1,17 +1,18 @@
-
+from components.AI import *
 
 class Encounter:
     """
     - Group all entities and items as a single entity or relate between them
+    - encounter_type are AI classes from components.AI
     """
-    def __init__(self, main_room, encounter_number, encounter_type='basic'):
+    def __init__(self, main_room, encounter_number, encounter_type=BasicMob):
         self.encounter_number = encounter_number
         # self.entities = entities
         # self.items = items
         self.monster_list = []
         self.item_list = []
         self.main_room = main_room
-        self.encounter_type = encounter_type
+        self.encounter_type = encounter_type  # component.AI
 
     def print_encounter(self):
         print('\nEncounter #%s' % self.encounter_number)

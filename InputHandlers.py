@@ -16,7 +16,7 @@ def handle_keys(key, game_state):
         return handle_inventory_keys(key, game_state)
     elif game_state == GameStates.LEVEL_UP:
         return handle_level_up_menu(key)
-    elif game_state == GameStates.CHARACTER_SCREEN:
+    elif game_state == GameStates.CHARACTER_SCREEN or game_state == GameStates.READ:
         return handle_character_screen(key)
     return {}
 
@@ -28,6 +28,9 @@ def handle_inventory_keys(key, game_state):
     if key.vk == libtcod.KEY_ENTER and key.lalt:
         # Alt+Enter: toggle fullscreen
         return {'fullscreen': True}
+        # User Actions
+    elif str(key.c) == 'r':  # wait
+        return {'wait': True}
     elif key.vk == libtcod.KEY_ESCAPE or \
             (key.c == ord('i') and game_state == GameStates.SHOW_INVENTORY) or \
             (key.c == ord('t') and game_state == GameStates.DROP_INVENTORY):
@@ -69,6 +72,8 @@ def handle_level_up_menu(key):
 def handle_character_screen(key):
     if chr(key.c) == 'v' or key.vk == libtcod.KEY_ESCAPE:
         return {'exit': True}
+    elif chr(key.c) == 'r':
+        return {'wait': True}
 
     return {}
 
@@ -89,6 +94,12 @@ def handle_debug_menu(key):
             return {'revive_player': True}
         elif key_char == '6':
             return {'show_spawn_table': True}
+        elif key_char == '7':
+            return {'size_8_font': True, 'exit': True}
+        elif key_char == '8':
+            return {'size_10_font': True, 'exit': True}
+        elif key_char == '9':
+            return {'size_16_font': True, 'exit': True}
         elif key.vk == libtcod.KEY_ESCAPE or key.vk == libtcod.KEY_HOME or key.vk == libtcod.KEY_KP7:
             return {'exit': True}
     return {}
@@ -122,6 +133,8 @@ def handle_player_turn_keys(key):
         return {'wait': True}
     elif key_char == 'g':  # get key
         return {'pickup': True}
+    elif key_char == 'v':  # show character stats
+        return {'show_character_screen': True}
     elif key_char == 'i':  # display inventory
         return {'show_inventory': True}
     elif key_char == 't':  # drop inventory
@@ -155,7 +168,7 @@ def handle_player_dead_keys(key):
 
     if key_char == 'i':
         return {'show_inventory': True}
-    elif key.vk == libtcod.KEY_HOME:
+    elif key.vk == libtcod.KEY_HOME or key.vk == libtcod.KEY_KP7:
         return {'debug_menu': True}
 
     if key.vk == libtcod.KEY_ENTER and key.lalt:

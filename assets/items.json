@@ -1,19 +1,22 @@
 {
   "healing_potion": {
     "name": "Healing Potion",
-    "char": "!",
+    "char": 33,
+    "glyph": "!",
     "color": [127, 0, 255],
     "type": "consumable",
     "equippable": false,
     "amount": 40,
     "use_function": "heal",
     "spawn_chance": 35,
-    "item_level": 1
+    "item_level": 1,
+    "unique": false
   },
 
   "fireball_scroll": {
     "name": "Fireball Scroll",
-    "char": "#",
+    "char": 35,
+    "glyph": "#",
     "color": [255, 0, 0],
     "type": "consumable",
     "equippable": false,
@@ -25,12 +28,14 @@
     "targeting":true,
     "targeting_message": "Left-click a target area for the fireball, or right-click to cancel.",
     "spawn_chance": 25,
-    "item_level": 6
+    "item_level": 6,
+    "unique": false
   },
 
   "lightning_scroll": {
     "name": "Lightning Scroll",
-    "char": "#",
+    "char": 35,
+    "glyph": "#",
     "color": [255, 255, 0],
     "type": "consumable",
     "equippable": false,
@@ -41,12 +46,14 @@
     "use_function": "cast_lightning",
     "targeting": false,
     "spawn_chance": 25,
-    "item_level": 4
+    "item_level": 4,
+    "unique": false
   },
 
   "confusion_scroll":{
     "name": "Confusion Scroll",
-    "char": "#",
+    "char": 35,
+    "glyph": "#",
     "color":[255, 115, 185],
     "type": "consumable",
     "equippable": false,
@@ -57,12 +64,14 @@
     "targeting": true,
     "targeting_message": "Left-click an enemy to confuse it, or right-click to cancel.",
     "spawn_chance": 10,
-    "item_level": 2
+    "item_level": 2,
+    "unique": false
   },
 
   "iron_sword": {
     "name": "Iron Sword",
     "char": "/",
+    "glyph": "/",
     "color": [0, 191, 255],
     "type": "equip",
     "equippable": true,
@@ -71,7 +80,24 @@
     "hp": 0,
     "slot": "EquipmentSlots.MAIN_HAND",
     "spawn_chance": 5,
-    "item_level": 4
+    "item_level": 4,
+    "unique": false
+  },
+
+  "dagger": {
+    "name": "Dagger",
+    "char": 45,
+    "glyph": "-",
+    "color": [0, 191, 255],
+    "type": "equip",
+    "equippable": true,
+    "attack": 2,
+    "defense": 0,
+    "hp": 0,
+    "slot": "EquipmentSlots.MAIN_HAND",
+    "spawn_chance": 5,
+    "item_level": 1,
+    "unique": false
   },
 
   "iron_shield":{
@@ -85,6 +111,44 @@
     "hp": 0,
     "slot": "EquipmentSlots.OFF_HAND",
     "spawn_chance": 15,
-    "item_level": 4
+    "item_level": 4,
+    "unique": false
+  },
+
+  "bread": {
+    "name": "Bread",
+    "char": "f",
+    "color": [255, 191, 0],
+    "type": "consumable",
+    "equippable": false,
+    "amount": 10,
+    "use_function": "heal",
+    "spawn_chance": 10,
+    "item_level": 1,
+    "hunger": 50,
+    "unique": false
+  },
+
+  "document": {
+    "name": "Ledger Page",
+    "char": "#",
+    "color": [64, 128, 128],
+    "type": "reuseable",
+    "use_function": "read",
+    "spawn_chance": 50,
+    "item_level": 1,
+    "text": "Hello World!",
+    "unique": false
+  },
+  "map": {
+    "name": "Dungeon Map",
+    "char": "#",
+    "color": [191, 191, 0],
+    "type": "reuseable",
+    "use_function": "read",
+    "spawn_chance": 50,
+    "item_level": 1,
+    "text": "",
+    "unique": true
   }
 }

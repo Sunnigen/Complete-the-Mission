@@ -1,25 +1,80 @@
 {
-  "orc": {
-    "name": "Orc",
-    "char": "o",
+  "flamewood_guard": {
+    "name": "Guard",
+    "char": 103,
+    "glyph": "g",
     "color": [64, 128, 64],
     "hp": 20,
     "def": 1,
-    "att": 4,
+    "att": 3,
     "xp": 35,
     "spawn_chance": [[80, 1]],
-    "mob_level": 1
+    "mob_level": 1,
+    "fov": 4
   },
-
-  "troll": {
-    "name": "Troll",
-    "char": "T",
-    "color": [0, 128, 0],
-    "hp": 30,
+  "flamewood_dog": {
+    "name": "Guard Dog",
+    "char": 100,
+    "glyph": "d",
+    "color": [128, 126, 0],
+    "hp": 10,
+    "def": 0,
+    "att": 5,
+    "xp": 35,
+    "spawn_chance": [[10, 1], [50, 5]],
+    "mob_level": 2,
+    "fov": 7
+  },
+  "flamewood_officer": {
+    "name": "Officer",
+    "char": 111,
+    "glyph": "o",
+    "color": [127, 255, 0],
+    "hp": 35,
     "def": 2,
-    "att": 8,
-    "xp": 100,
-    "spawn_chance": [[15, 3], [30, 5], [60, 7]],
-    "mob_level": 1
+    "att": 5,
+    "xp": 70,
+    "spawn_chance": [[10, 2], [25, 4], [30, 7]],
+    "mob_level": 4,
+    "fov": 4
+  },
+  "weak_prisoner": {
+    "name": "Prisoner",
+    "char": 112,
+    "glyph": "p",
+    "color": [64, 128, 64],
+    "hp": 5,
+    "def": 0,
+    "att": 0,
+    "xp": 10,
+    "spawn_chance": [[100, 1]],
+    "mob_level": 1,
+    "fov": 4
+  },
+  "strong_prisoner": {
+    "name": "Red Eye Patch",
+    "char": 112,
+    "glyph": "p",
+    "color": [64, 128, 64],
+    "hp": 5,
+    "def": 0,
+    "att": 0,
+    "xp": 10,
+    "spawn_chance": [[100, 1]],
+    "mob_level": 1,
+    "fov": 4
+  },
+  "player": {
+    "name": "Player",
+    "char": 64,
+    "glyph": "@",
+    "color": [191, 171, 143],
+    "hp": 0,
+    "def": 0,
+    "att": 0,
+    "xp": 0,
+    "spawn_chance": [[0, 1]],
+    "mob_level": 99,
+    "fov": 10
   }
 }

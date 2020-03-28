@@ -4,9 +4,13 @@ from GameMessages import Message
 
 
 class Inventory:
-    def __init__(self, capacity):
+    def __init__(self, capacity, items=[]):
         self.capacity = capacity
-        self.items = []
+        self.items = items
+
+    @property
+    def empty(self):
+        return False if len(self.items) > 0 else True
 
     def add_item(self, item):
         results = []
@@ -45,10 +49,18 @@ class Inventory:
                 kwargs = {**item_component.function_kwargs, **kwargs}
 
                 item_use_results = item_component.use_function(self.owner, **kwargs)
-                # Remove Item from Inventory
+
+                # Check if Item is Altered after Usage
                 for item_use_result in item_use_results:
+                    # Remove Item from Inventory
                     if item_use_result.get('consumed'):
                         self.remove_item(item_entity)
+                        break
+
+                    # Keep Item in Inventory
+                    if item_use_result.get('reuseable'):
+                        # results.append({'message': Message("")})
+                        break
 
                 results.extend(item_use_results)
 
@@ -60,12 +72,13 @@ class Inventory:
     def drop_item(self, item):
         results = []
 
+        # Untoggle Item if Equipped
         if self.owner.equipment.main_hand == item or self.owner.equipment.off_hand == item:
             self.owner.equipment.toggle_equip(item)
 
+        # Drop Item at Owner Location
         item.x = self.owner.x
         item.y = self.owner.y
-
         self.remove_item(item)
         results.append({'item_dropped': item, 'message': Message('You dropped the %s.' % item.name,
                                                                  libtcod.yellow)})

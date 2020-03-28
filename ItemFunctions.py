@@ -4,6 +4,23 @@ from components.AI import ConfusedMonster
 from GameMessages import Message
 
 
+def read(*args, **kwargs):
+    name = kwargs.get('name')
+    text = kwargs.get('text')
+    results = []
+    if name == "Dungeon Map":
+        results.append({'map': True,
+                        'message': Message('You take the %s out of your inventory.' % name,
+                                           libtcod.yellow)})
+    else:
+
+        results.append({'reuseable': True,
+                        'message': Message('You place the %s back in your inventory.' % name,
+                                                              libtcod.yellow)})
+        results.append({'message': Message(text)})
+    return results
+
+
 def heal(*args, **kwargs):
     entity = args[0]
     amount = kwargs.get('amount')
@@ -99,7 +116,7 @@ def cast_confuse(*args, **kwargs):
             entity.ai = confused_ai
 
             results.append({'consumed': True, 'message': Message(
-                'The eyes of the %s look vacant, as ge starts to stumble around!' %
+                'The eyes of the %s look vacant, as he starts to stumble around!' %
                 entity.name, libtcod.light_green)}
                            )
             break
