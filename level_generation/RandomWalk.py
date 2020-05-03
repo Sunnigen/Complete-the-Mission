@@ -26,7 +26,7 @@ class RandomWalkAlgorithm:
         self.random_walk_y = 0
 
     def generate_level(self, game_map, dungeon_level, max_rooms, room_min_size, room_max_size, map_width, map_height,
-                       player, entities, item_table, mob_table):
+                       player, entities, item_table, mob_table, object_table):
         # Creates an empty 2D array or clears existing array
         self.walk_iterations = max(self.walk_iterations, (map_width * map_height * 10))
         self.game_map = game_map
@@ -54,7 +54,7 @@ class RandomWalkAlgorithm:
                     room = Circle(game_map, self.random_walk_x, self.random_walk_y, self.radius,
                                   len(game_map.rooms) + 1)
                     game_map.rooms.append(room)
-                    place_entities(self.game_map, self.dungeon_level, room, entities, item_table, mob_table)
+                    place_entities(self.game_map, self.dungeon_level, room, entities, item_table, mob_table, object_table)
                     self.encounters.append((self.random_walk_x, self.random_walk_y))
                 else:
                     # TODO: Find a way to not allow multiple iteration checks for encounter_within_proximity
@@ -67,7 +67,7 @@ class RandomWalkAlgorithm:
         # Place Stairs at Last Location
         entities.append(place_stairs(self.dungeon_level, self.random_walk_x, self.random_walk_y))
         create_floor(game_map, self.random_walk_x, self.random_walk_y)
-        self.print_generation_stats(i)
+        # self.print_generation_stats(i)
 
     def walk(self, map_width, map_height):
         # ==== Choose Direction ====

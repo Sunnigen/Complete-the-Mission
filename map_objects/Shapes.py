@@ -1,3 +1,4 @@
+
 from random import choice, randint
 
 
@@ -14,6 +15,7 @@ class SquareRoom:
         self.x2 = x + w
         self.y2 = y + h
         self.room_number = room_number
+        self.room_type = ''
 
     def check_point_within_room(self, x, y):
         return self.x1 <= x <= self.x2 and self.y1 <= y <= self.y2
@@ -36,7 +38,7 @@ class SquareRoom:
         return (self.x1 <= other_shape.x2 and self.x2 >= other_shape.x1 and
                 self.y1 <= other_shape.y2 and self.y2 >= other_shape.y1)
 
-    def obtain_point_within(self):
+    def obtain_point_within(self, padding=2):
         return randint(self.x1, self.x2), randint(self.y1, self.y2)
 
     @property
@@ -67,6 +69,7 @@ class Circle:
         self.r = r
         self.game_map = game_map
         self.room_number = room_number
+        self.room_type = ''
 
     @property
     def center(self):
@@ -82,10 +85,13 @@ class Circle:
         """
         return (self.x - x2) ** 2 + (self.y - y2) ** 2 < self.r ** 2
 
+    def check_point_within_room(self, x, y):
+        return self.intersect_point(x, y)
+
     def intersect(self, *args):
         print('%s doesn\'t have an intersect function, only intersect_point(x, y).' % self.__class__)
 
-    def obtain_point_within(self):
+    def obtain_point_within(self, padding=2):
         points = []
         for x in range(self.x - self.r, self.x + self.r):
             for y in range(self.y - self.r, self.y + self.r):
@@ -96,12 +102,35 @@ class Circle:
         return x, y
 
 
+class PolygonRoom:
+    def __init__(self, game_map, room_number, corners):
+        self.game_map = game_map
+        self.room_number = room_number
+        self.corners = corners
+        self.entrances = []
+        self.room_type = ''
+
+    @property
+    def center(self):
+        return (sum(p[0] for p in self.corners) / len(self.corners),
+                    (sum(p[1] for p in self.corners) / len(self.corners))
+                    )
+
+    def obtain_point_within(self, padding=2):
+        x, y = 0, 0
+        return (x, y)
+
+    def check_point_within_room(self, x, y, padding=2):
+        return False
+
+
 class Cave:
     # Used for cellular automata
     def __init__(self, game_map, coords, room_number):
         self.coords = coords
         self.game_map = game_map
         self.room_number = room_number
+        self.room_type = ''
 
     @property
     def center(self):
@@ -119,7 +148,10 @@ class Cave:
         return x_count//coords_count, y_count//coords_count
         # self.center = centroid
 
-    def obtain_point_within(self):
+    def check_point_within_room(self, x, y):
+        return (x, y) in self.coords
+
+    def obtain_point_within(self, padding=2):
         return choice(tuple(self.coords))
 
     @property
@@ -152,7 +184,6 @@ class BSPRoom(SquareRoom):
         self.parent_room = None
         self.sub_rooms = []
         self.entrances = []
-        self.room_type = None
 
     def check_point_within_room(self, x, y, padding=2):
         return self.x1 + padding <= x <= self.x2 - padding and self.y1 + padding <= y <= self.y2 - padding
