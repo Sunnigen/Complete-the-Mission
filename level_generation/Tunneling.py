@@ -10,12 +10,11 @@ class TunnelingAlgorithm:
     - Tunnel from room to room, vertically or horizontally, to create a connected dungeon.
     - Will tunnel through any room regardless of entities or obstacles already generated.
     """
-    def __init__(self):
-        self.game_map = None
-        self.dungeon_level = 0
+    game_map = None
+    dungeon_level = 0
 
     def generate_level(self, game_map, dungeon_level, max_rooms, room_min_size, room_max_size, map_width, map_height,
-                       player, entities, item_table, mob_table):
+                       player, entities, item_table, mob_table, object_table):
 
         self.game_map = game_map
         self.dungeon_level = dungeon_level
@@ -53,7 +52,7 @@ class TunnelingAlgorithm:
                     create_hall(game_map, previous_map, new_room)
 
                 # Determine Monster Placement and Population
-                place_entities(game_map, dungeon_level, new_room, entities, item_table, mob_table)
+                place_entities(game_map, dungeon_level, new_room, entities, item_table, mob_table, object_table)
 
                 # finally, append the new room to the list
                 rooms.append(new_room)

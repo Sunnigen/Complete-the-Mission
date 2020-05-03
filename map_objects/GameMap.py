@@ -7,6 +7,7 @@ from loader_functions.JsonReader import obtain_item_table, obtain_mob_table, obt
 from level_generation.FlameWoodPrison import FlameWoodPrison
 from level_generation.CellularAutomata import CellularAutomataAlgorithm
 from level_generation.GenerationUtils import place_tile
+from level_generation.Overworld import Overworld
 from level_generation.RandomWalk import RandomWalkAlgorithm
 from level_generation.Tunneling import TunnelingAlgorithm
 from loader_functions.DataLoaders import save_game
@@ -14,13 +15,7 @@ from GameMessages import Message
 
 
 # LEVEL_GENERATION = [BSPTreeAlgorithm, CellularAutomataAlgorithm, RandomWalkAlgorithm, TunnelingAlgorithm]
-# LEVEL_GENERATION = [CellularAutomataAlgorithm, RandomWalkAlgorithm, TunnelingAlgorithm]
-# LEVEL_GENERATION = [RandomWalkAlgorithm]
-# LEVEL_GENERATION = [CellularAutomataAlgorithm, RandomWalkAlgorithm]
-# LEVEL_GENERATION = [TunnelingAlgorithm, RandomWalkAlgorithm]
-# LEVEL_GENERATION = [TunnelingAlgorithm]
-# LEVEL_GENERATION = [FlameWoodPrison, TunnelingAlgorithm, RandomWalkAlgorithm]
-LEVEL_GENERATION = [FlameWoodPrison]
+LEVEL_GENERATION = [CellularAutomataAlgorithm, RandomWalkAlgorithm, TunnelingAlgorithm]
 
 """
 1. Tunneling Algorithm
@@ -35,24 +30,50 @@ LEVEL_GENERATION = [FlameWoodPrison]
 
 
 class GameMap(Map):
+    explored = [[]]
+    tileset_tiles = [[]]
+    char_tiles = [[]]
+
     def __init__(self, width, height, dungeon_level=1):
         super(GameMap, self).__init__(width, height)
         # Map Variables
         self.dungeon_level = dungeon_level
-        self.explored = [[False for y in range(self.width)] for x in range(self.height)]
-        self.tile_set = obtain_tile_set()
-        blank_tile = self.tile_set['0'].get('char')
-        self.char_tiles = [[blank_tile for y in range(self.width)] for x in range(self.height)]
-        self.tileset_tiles = [[0 for y in range(self.width)] for x in range(self.height)]
         self.spawn_chances = {'mobs': {},
                               'items': {}}  # Used to display dungeon level stats
+        self.tile_set = obtain_tile_set()
         self.rooms = []
         self.encounters = []  # Used to keep track of entities in the same group, centered on a room
         self.entrances = []
         self.player = None
         self.map_objects = []
 
-    def make_map(self, max_rooms, room_min_size, room_max_size, map_width, map_height, player, entities, encounters):
+    def initialize_open_map(self):
+        # Set Entire Map to Open Floor
+        self.explored = [[True for y in range(self.width)] for x in range(self.height)]
+        blank_tile = self.tile_set['2'].get('char')
+        self.char_tiles = [[blank_tile for y in range(self.width)] for x in range(self.height)]
+        self.tileset_tiles = [[2 for y in range(self.width)] for x in range(self.height)]
+
+        for x in range(self.height):
+            for y in range(self.width):
+                self.walkable[x][y] = True
+                self.transparent[x][y] = True
+                self.fov[x][y] = True
+
+    def initialize_closed_map(self):
+        # Set Entire Map to Closed Walls
+        self.explored = [[False for y in range(self.width)] for x in range(self.height)]
+        blank_tile = self.tile_set['1'].get('char')
+        self.char_tiles = [[blank_tile for y in range(self.width)] for x in range(self.height)]
+        self.tileset_tiles = [[1 for y in range(self.width)] for x in range(self.height)]
+
+        for x in range(self.height):
+            for y in range(self.width):
+                self.walkable[x][y] = False
+                self.transparent[x][y] = False
+                self.fov[x][y] = False
+
+    def make_map(self, max_rooms, room_min_size, room_max_size, map_width, map_height, player, entities, encounters, level=None):
         # Map Generation Variables
         self.player = player
         self.rooms = []
@@ -67,66 +88,78 @@ class GameMap(Map):
         # Obtain only "Objects" from Tile Set
         furniture_table = {key: val for key, val in self.tile_set.items() if val.get('type') == 'object'}
 
-        algorithm = choice(LEVEL_GENERATION)()  # Choose PCG and initialize it
+        # print('level:', level)
+        if level == 'overworld':
+            self.initialize_open_map()
+            algorithm = Overworld()
+        elif level == 'flamewood_prison':
+            self.initialize_closed_map()
+            algorithm = FlameWoodPrison()
+
+            # Place Doors
+            for r in self.rooms:
+                for ex, ey in r.entrances:
+                    # game_map, x, y, obj, transparent, fov, walkable
+                    place_tile(self, ex, ey, 5)
+        else:
+            self.initialize_closed_map()
+            algorithm = choice(LEVEL_GENERATION)()  # Choose PCG and initialize it
+
         print('\n\nGeneration Type for Dungeon Level %s: %s' % (self.dungeon_level, algorithm.__class__))
         algorithm.generate_level(self, self.dungeon_level, max_rooms, room_min_size, room_max_size, map_width,
                                  map_height, player, entities, item_table, mob_table, furniture_table)
 
         # TODO: Make furniture entities a part of the map that updates once.
         # Place Furniture Entities
-        for f in self.map_objects:
-            print('char:', f.char, f.name, f.json_index)
-            place_tile(self, f.x, f.y, f.json_index)
+        # for f in self.map_objects:
+        #     print('char:', f.char, f.name, f.json_index)
+        #     place_tile(self, f.x, f.y, f.json_index)
 
             # self.tiles[f.y][f.x] = f.char
             # if not f.furniture.walkable:
             #     self.walkable[f.y][f.x] = False
 
-        # Place Doors
-        for r in self.rooms:
-            for ex, ey in r.entrances:
-                # game_map, x, y, obj, transparent, fov, walkable
-                place_tile(self, ex, ey, 5)
 
-        for row in self.tileset_tiles:
-            print(row)
-        for row in self.char_tiles:
-            print(row)
+
+
+        # for row in self.tileset_tiles:
+        #     print(row)
+        # for row in self.char_tiles:
+        #     print(row)
 
         # Generation Stats
-        mob_count = {}
-        item_count = {}
-        furniture_count = {}
-        for e in entities:
-            if e.ai:
-                if e.name in mob_count:
-                    mob_count[e.name] += 1
-                else:
-                    mob_count[e.name] = 1
-            elif e.item or e.equippable:
-                if e.name in item_count:
-                    item_count[e.name] += 1
-                else:
-                    item_count[e.name] = 0
-            elif e.map_object:
-                if e.name in furniture_count:
-                    furniture_count[e.name] += 1
-                else:
-                    furniture_count[e.name] = 0
+        # mob_count = {}
+        # item_count = {}
+        # furniture_count = {}
+        # for e in entities:
+        #     if e.ai:
+        #         if e.name in mob_count:
+        #             mob_count[e.name] += 1
+        #         else:
+        #             mob_count[e.name] = 1
+        #     elif e.item or e.equippable:
+        #         if e.name in item_count:
+        #             item_count[e.name] += 1
+        #         else:
+        #             item_count[e.name] = 0
+        #     elif e.map_object:
+        #         if e.name in furniture_count:
+        #             furniture_count[e.name] += 1
+        #         else:
+        #             furniture_count[e.name] = 0
+        #
+        # print('\nMob List:')
+        # for mob, count in mob_count.items():
+        #     print('\t%s: %s' % (mob, count))
+        # print('\nItem List:')
+        # for item, count in item_count.items():
+        #     print('\t%s: %s' % (item, count))
+        # print('\nFurniture List:')
+        # for furniture, count in furniture_count.items():
+        #     print('\t%s: %s' % (furniture, count))
 
-        print('\nMob List:')
-        for mob, count in mob_count.items():
-            print('\t%s: %s' % (mob, count))
-        print('\nItem List:')
-        for item, count in item_count.items():
-            print('\t%s: %s' % (item, count))
-        print('\nFurniture List:')
-        for furniture, count in furniture_count.items():
-            print('\t%s: %s' % (furniture, count))
 
-
-        # for room in self.rooms:
-        #     print(room.room_number)
+        # for room in self.rooms:1
         # self.transparent[player.y][player.x] = False  # block new position
 
         # Show Floor Layout

@@ -11,10 +11,10 @@ from DeathFunctions import kill_player, kill_monster
 from Entity import get_blocking_entities_at_location, get_blocking_object_at_location
 from FOVFunctions import definite_enemy_fov, initialize_fov, recompute_fov
 from GameStates import GameStates
-from InputHandlers import handle_keys, handle_main_menu, handle_mouse
+from InputHandlers import handle_level_select, handle_keys, handle_main_menu, handle_mouse
 from loader_functions.InitializeNewGame import get_constants, get_game_variables
 from loader_functions.DataLoaders import load_game, save_game
-from Menus import main_menu, message_box
+from Menus import main_menu, message_box, select_level
 # TODO: Is RenderFunctions.clear_all still needed?
 from RenderFunctions import render_all # clear_all
 
@@ -46,6 +46,7 @@ def main():
 
     # Menu Variables
     show_main_menu = True
+    show_level_select = True
     show_load_error_message = False
 
     main_menu_background_image = libtcod.image_load('assets/menu_background.png')
@@ -84,9 +85,8 @@ def main():
 
             # Start a New Game
             elif new_game:
-                player, entities, game_map, message_log, game_state = get_game_variables(constants)
-                game_state = GameStates.PLAYER_TURN
-
+                show_level_select = True
+                clear_console(root)
                 show_main_menu = False
 
             # Reload Saved Game
@@ -101,6 +101,40 @@ def main():
 
             elif exit_game:
                 break
+
+        elif show_level_select:
+            levels = ['Overworld', 'Flamewood Prison', 'Generic', ]
+            # con, levels, width, screen_width, screen_height
+            select_level(con, levels, 24, constants['screen_width'], constants['screen_height'])
+
+            libtcod.console_flush()  # Present everything onto the the screen
+
+            # User Inputs
+            action = handle_level_select(key)
+
+            overworld = action.get('overworld')
+            flamewood_prison = action.get('flamewood_prison')
+            generic = action.get('generic')
+            back = action.get('exit')
+
+            level = None
+
+            if back:
+                show_main_menu = True
+                show_level_select = False
+
+
+            if overworld:
+                level = 'overworld'
+            elif flamewood_prison:
+                level = 'flamewood_prison'
+            elif generic:
+                level = 'generic'
+
+            if overworld or flamewood_prison or generic:
+                player, entities, game_map, message_log, game_state = get_game_variables(constants, level=level)
+                game_state = GameStates.PLAYER_TURN
+                show_level_select = False
 
         # Do not Show Main Menu, Show Game
         else:
@@ -387,7 +421,6 @@ def play_game(player, entities, game_map, message_log, game_state, root, con, pa
             if game_map.is_within_map(destination_x, destination_y):
 
                 # Check if Map is Walkable
-                # print(game_map.is_blocked(destination_x, destination_y), game_map.transparent[destination_y][destination_x])
                 if not game_map.is_blocked(destination_x, destination_y):
                     target = get_blocking_entities_at_location(entities, destination_x, destination_y)
 

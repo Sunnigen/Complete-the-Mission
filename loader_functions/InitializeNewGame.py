@@ -19,15 +19,13 @@ def get_constants():
     window_title = 'Complete The Mission'
 
     # Size of Window
-    screen_width = 50
+    screen_width = 90
     screen_height = 50
 
     # Size of Map Render
-    viewport_width = 10
-    # viewport_width = 0
-    viewport_height = 10
-    # viewport_height = 0
 
+    viewport_width = 15
+    viewport_height = 15
     bar_width = 20
     panel_height = 7
     panel_y = screen_height - panel_height
@@ -82,7 +80,7 @@ def get_constants():
     return constants
 
 
-def get_game_variables(constants):
+def get_game_variables(constants, level=None):
     # Player Variables
     fighter_component = Fighter(hp=100, defense=1, power=2, fov=constants.get('fov_radius'))
     inventory_component = Inventory(26)
@@ -111,7 +109,8 @@ def get_game_variables(constants):
     # TODO: Change game_map into a Map variable containing all the entities and tiles. All tiles are not transparent
     game_map = GameMap(constants['map_width'], constants['map_height'], dungeon_level=1)
     game_map.make_map(constants['max_rooms'], constants['room_min_size'], constants['room_max_size'],
-                      constants['map_width'], constants['map_height'], player, entities, encounters=encounters)
+                      constants['map_width'], constants['map_height'], player, entities, encounters=encounters,
+                      level=level)
 
     # Initialize Message Log
     message_log = MessageLog(constants['message_x'], constants['message_width'], constants['message_height'])

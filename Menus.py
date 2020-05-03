@@ -85,9 +85,20 @@ def main_menu(con, background_image, screen_width, screen_height):
     libtcod.console_print_ex(0, int(screen_width / 2), int(screen_height / 2) - 4, libtcod.BKGND_DEFAULT, libtcod.CENTER,
                              'TOMBS OF THE ANCIENT KINGS')
     libtcod.console_print_ex(0, int(screen_width / 2), int(screen_height - 2), libtcod.BKGND_DEFAULT, libtcod.CENTER,
-                             'By ********')
+                             'By: Sunnigen')
 
     menu(con, '', ['New Game', 'Continue', 'Quit'], 24, screen_width, screen_height)
+
+
+def select_level(con, levels, width, screen_width, screen_height):
+    # Level Selection
+    # menu(con, header, options, width, screen_width, screen_height):
+    #
+    libtcod.console_set_default_foreground(0, libtcod.yellow)
+    libtcod.console_print_ex(0, int(screen_width / 2), int(screen_height / 2) - 4, libtcod.BKGND_DEFAULT,
+                             libtcod.CENTER,
+                             'LEVEL SELECT')
+    menu(con, '', levels, width, screen_width, screen_height)
 
 
 def level_up_menu(con, header, player, menu_width, screen_width, screen_height):
@@ -104,7 +115,9 @@ def map_screen(con, entities, game_map, header, map_width, map_height, screen_wi
     color = [0, 0, 100]
     for x in range(game_map.width):
         for y in range(game_map.height):
-            if game_map.walkable[y][x]:
+            if game_map.tileset_tiles[y][x] == 12:
+                color = [128, 0, 0]
+            elif game_map.walkable[y][x]:
                 color = [50, 50, 150]
             elif not game_map.walkable[y][x]:
                 color = [0, 0, 100]

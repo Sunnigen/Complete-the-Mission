@@ -31,16 +31,16 @@ def calculate_distance(x1, y1, x2, y2):
 
 def close_room(game_map, room):
     # Sets Tiles in to Become Passable
-    for x in range(room.x1 + 1, room.x2):
-        for y in range(room.y1 + 1, room.y2):
+    for x in range(room.x1, room.x2):
+        for y in range(room.y1, room.y2):
             create_wall(game_map, x, y)
 
 
-def create_walled_room(game_map, room):
+def create_walled_room(game_map, room, buffer=0):
     # Sets Tiles in to Become Passable, but add walls around
-    for x in range(room.x1 + 1, room.x2):
-        for y in range(room.y1 + 1, room.y2):
-            if x == room.x1 + 1 or x == room.x2 - 1 or y == room.y1 + 1 or y == room.y2 - 1:
+    for x in range(room.x1, room.x2):
+        for y in range(room.y1, room.y2):
+            if x == room.x1 or x == room.x2 - buffer or y == room.y1 or y == room.y2 - buffer:
                 create_wall(game_map, x, y)
             else:
                 create_floor(game_map, x, y)
@@ -48,8 +48,8 @@ def create_walled_room(game_map, room):
 
 def create_room(game_map, room):
     # Sets Tiles in to Become Passable
-    for x in range(room.x1 + 1, room.x2):
-        for y in range(room.y1 + 1, room.y2):
+    for x in range(int(room.x1) + 1, int(room.x2)):
+        for y in range(int(room.y1) + 1, int(room.y2)):
             create_floor(game_map, x, y)
 
 
@@ -63,7 +63,8 @@ def create_hall(game_map, room1, room2):
     # print('Check if Room 1 Overlaps Room 2 Horizontally')
     for x in range(room1.x1 + 1, room1.x2 -1):
         if room2.x1 < x < room2.x2:
-            create_v_tunnel(game_map, y1, y2, randint(room1.x1 + 3, room1.x2 - 2))
+            create_v_tunnel(game_map, y1, y2, randint(room1.x1, room1.x2))
+            # create_v_tunnel(game_map, y1, y2, randint(room1.x1 + 3, room1.x2 - 2))
             # create_h_tunnel(game_map, x1, x2, y1)
             # print('Room 1 overlaps horizontally')
             return None
@@ -72,7 +73,8 @@ def create_hall(game_map, room1, room2):
     # print('Check if Room 1 Overlaps Room 2 Vertically')
     for y in range(room1.y1 + 1, room1.y2 - 1):
         if room2.y1 < y < room2.y2:
-            create_h_tunnel(game_map, x1, x2, randint(room1.y1 + 3, room1.y2 - 2))
+            create_h_tunnel(game_map, x1, x2, randint(room1.y1, room1.y2))
+            # create_h_tunnel(game_map, x1, x2, randint(room1.y1 + 3, room1.y2 - 2))
             # create_v_tunnel(game_map, y1, y2, x1)
             # print('Room 1 overlaps vertically')
             return None
@@ -115,6 +117,7 @@ def create_wall(game_map, x, y):
 
 def place_tile(game_map, x, y, obj):
     # Places Tile
+    # print('place_tile:', x, y)
     tile = TILE_SET.get(str(obj))
     game_map.transparent[y][x] = tile.get('transparent')
     game_map.fov[y][x] = tile.get('fov')
@@ -164,7 +167,7 @@ def create_door(game_map, sub_room, main_room):
         print('\n\nno door was created???')
         print('main_room:', main_room.center)
         print('sub_room:', sub_room.center)
-    create_hall(game_map, sub_room, main_room)
+    # create_hall(game_map, sub_room, main_room)
     # create_floor(game_map, x_door, y_door)
     return x_door, y_door
 
