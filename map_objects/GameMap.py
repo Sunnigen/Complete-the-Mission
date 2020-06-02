@@ -1,21 +1,20 @@
-from random import choice, randint
+from random import choice
 
 import tcod as libtcod
 from tcod.map import Map
 
 from loader_functions.JsonReader import obtain_item_table, obtain_mob_table, obtain_tile_set
-from level_generation.FlameWoodPrison import FlameWoodPrison
-from level_generation.CellularAutomata import CellularAutomataAlgorithm
+from level_generation.UndergravePrison import UndergravePrison
+from level_generation.ResinfaireForest import ResinFaireForest
 from level_generation.GenerationUtils import place_tile
 from level_generation.Overworld import Overworld
 from level_generation.RandomWalk import RandomWalkAlgorithm
 from level_generation.Tunneling import TunnelingAlgorithm
-from loader_functions.DataLoaders import save_game
 from GameMessages import Message
 
 
 # LEVEL_GENERATION = [BSPTreeAlgorithm, CellularAutomataAlgorithm, RandomWalkAlgorithm, TunnelingAlgorithm]
-LEVEL_GENERATION = [CellularAutomataAlgorithm, RandomWalkAlgorithm, TunnelingAlgorithm]
+LEVEL_GENERATION = [RandomWalkAlgorithm, TunnelingAlgorithm]
 
 """
 1. Tunneling Algorithm
@@ -41,15 +40,17 @@ class GameMap(Map):
         self.spawn_chances = {'mobs': {},
                               'items': {}}  # Used to display dungeon level stats
         self.tile_set = obtain_tile_set()
-        self.rooms = []
+        self.rooms = {}
         self.encounters = []  # Used to keep track of entities in the same group, centered on a room
         self.entrances = []
         self.player = None
         self.map_objects = []
+        self.level = ''
+        self.map = None
 
     def initialize_open_map(self):
         # Set Entire Map to Open Floor
-        self.explored = [[True for y in range(self.width)] for x in range(self.height)]
+        self.explored = [[False for y in range(self.width)] for x in range(self.height)]
         blank_tile = self.tile_set['2'].get('char')
         self.char_tiles = [[blank_tile for y in range(self.width)] for x in range(self.height)]
         self.tileset_tiles = [[2 for y in range(self.width)] for x in range(self.height)]
@@ -77,6 +78,7 @@ class GameMap(Map):
         # Map Generation Variables
         self.player = player
         self.rooms = []
+        self.map = None
         if encounters:
             self.encounters = encounters
         else:
@@ -91,24 +93,23 @@ class GameMap(Map):
         # print('level:', level)
         if level == 'overworld':
             self.initialize_open_map()
-            algorithm = Overworld()
-        elif level == 'flamewood_prison':
+            self.level = 'overworld'
+            self.map = Overworld()
+        elif level == 'undergrave':
             self.initialize_closed_map()
-            algorithm = FlameWoodPrison()
-
-            # Place Doors
-            for r in self.rooms:
-                for ex, ey in r.entrances:
-                    # game_map, x, y, obj, transparent, fov, walkable
-                    place_tile(self, ex, ey, 5)
+            self.map = UndergravePrison()
+            self.level = 'undergrave'
+        elif level == 'resinfaire':
+            self.map = ResinFaireForest()
+            self.level = 'resinfaire'
         else:
             self.initialize_closed_map()
-            algorithm = choice(LEVEL_GENERATION)()  # Choose PCG and initialize it
+            self.map = choice(LEVEL_GENERATION)()
+            self.level = 'Dungeon'
 
-        print('\n\nGeneration Type for Dungeon Level %s: %s' % (self.dungeon_level, algorithm.__class__))
-        algorithm.generate_level(self, self.dungeon_level, max_rooms, room_min_size, room_max_size, map_width,
+        print('\n\nGeneration Type for Dungeon Level %s: %s' % (self.dungeon_level, self.map.__class__))
+        self.map.generate_level(self, self.dungeon_level, max_rooms, room_min_size, room_max_size, map_width,
                                  map_height, player, entities, item_table, mob_table, furniture_table)
-
         # TODO: Make furniture entities a part of the map that updates once.
         # Place Furniture Entities
         # for f in self.map_objects:
@@ -189,8 +190,10 @@ class GameMap(Map):
                 self.transparent[y][x] = True
                 self.fov[y][x] = True
                 self.explored[y][x] = False
+
+        print('Advancing for to next level.', self.level)
         self.make_map(constants['max_rooms'], constants['room_min_size'], constants['room_max_size'],
-                      constants['map_width'], constants['map_height'], player, entities, self.encounters)
+                      constants['map_width'], constants['map_height'], player, entities, self.encounters, self.level)
 
         # player.fighter.heal(player.fighter.max_hp // 2)
 
@@ -200,13 +203,15 @@ class GameMap(Map):
         return entities
 
     def obtain_open_floor(self, points):
+        # print('obtain_open_floor', points)
         # Return list of coordinates within map and is not blocked by a wall
-        # open_points = []
+        open_points = []
         #
-        # for (x, y) in points:
-        #     if not self.is_blocked(x, y) and self.is_within_map(x, y):
-        #         open_points.append((x,y))
-        open_points = [(x, y) for (x, y) in points if not self.is_blocked(x, y)]
+        for (x, y) in points:
+            if self.walkable[y][x] and self.is_within_map(x, y):
+            # if self.is_blocked(x, y) and self.is_within_map(x, y):
+                open_points.append((x,y))
+        # open_points = [(x, y) for (x, y) in points if self.is_blocked(x, y)]
 
         return open_points
 

@@ -40,3 +40,17 @@ def obtain_tile_set(key_word=''):
 
     # print('item_table:', item_table)
     return tile_set_table
+
+
+def obtain_prefabs(key_word=''):
+    prefab_file = "%s\\assets\\prefab.json" % os.getcwd()
+
+    if not os.path.isfile(prefab_file):
+        print('Cannot locate %s!!!' % prefab_file)
+        raise FileNotFoundError
+
+    with open(prefab_file, "r") as read_file:
+        prefab_table = json.load(read_file)
+
+    # print('prefab_table:', prefab_table)
+    return prefab_table

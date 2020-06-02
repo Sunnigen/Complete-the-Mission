@@ -19,32 +19,34 @@ def get_constants():
     window_title = 'Complete The Mission'
 
     # Size of Window
-    screen_width = 90
-    screen_height = 50
+    screen_width = 50
+    screen_height = 40
 
     # Size of Map Render
 
-    viewport_width = 15
-    viewport_height = 15
-    bar_width = 20
-    panel_height = 7
+    viewport_width = 16
+    viewport_height = 16
+
+    panel_height = 8
     panel_y = screen_height - panel_height
+
+    # Side Panel
+    side_panel_height = viewport_height * 2
+    side_panel_width = screen_width - (screen_width - viewport_width) + 2
+    bar_width = side_panel_width - 2
     # panel_y = 0
     top_gui_height = 5
     top_gui_y = 0
 
-    message_x = bar_width + 2
-    message_width = screen_width - bar_width - 2
-    message_height = panel_height - 1
+    message_x = 1
+    message_width = screen_width - 2
+    message_height = panel_height - 2
 
-    # map_width = 40
     map_width = 100
-    # map_height = panel_y
-    # map_height = 25
-    map_height = 100
+    map_height = 80
 
-    room_max_size = 20
-    room_min_size = 10
+    room_max_size = min(map_height // 5, map_width // 5)
+    room_min_size = min(map_height // 10, map_width // 10)
     max_rooms = 50
 
     fov_algorithm = libtcod.FOV_BASIC
@@ -74,7 +76,9 @@ def get_constants():
         'viewport_width': viewport_width,
         'viewport_height': viewport_height,
         'top_gui_height': top_gui_height,
-        'top_gui_y': top_gui_y
+        'top_gui_y': top_gui_y,
+        'side_panel_height': side_panel_height,
+        'side_panel_width':side_panel_width
     }
 
     return constants
@@ -82,6 +86,7 @@ def get_constants():
 
 def get_game_variables(constants, level=None):
     # Player Variables
+    print('get_game_variables')
     fighter_component = Fighter(hp=100, defense=1, power=2, fov=constants.get('fov_radius'))
     inventory_component = Inventory(26)
     level_component = Level()

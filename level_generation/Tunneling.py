@@ -31,6 +31,7 @@ class TunnelingAlgorithm:
 
             # "Rect" class makes rectangles easier to work with
             new_room = SquareRoom(x, y, w, h, len(game_map.rooms) + 1)
+
             # Check if Room Intersects with Existing Rooms
             for other_room in rooms:
                 if new_room.intersect(other_room):
@@ -61,6 +62,5 @@ class TunnelingAlgorithm:
                 num_rooms += 1
 
         # Add End-of-Level Stairs
-        print("\nNumber of Rooms: %s" % len(game_map.rooms))
         center_of_last_room_x, center_of_last_room_y = rooms[num_rooms - 1].center
         entities.append(place_stairs(self.game_map.dungeon_level, center_of_last_room_x, center_of_last_room_y))

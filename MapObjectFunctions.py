@@ -29,6 +29,13 @@ def empty_chest(*args, **kwargs):
     return results
 
 
+def open_gate(*args, **kwargs):
+    print('open_gate')
+    results = []
+    results.append({'message': Message('A locked jail gate blocks your way...', libtcod.yellow)})
+    return results
+
+
 def open_chest(*args, **kwargs):
     chest = args[1]
     chest_inventory = chest.inventory

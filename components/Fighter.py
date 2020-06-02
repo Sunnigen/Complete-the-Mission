@@ -5,7 +5,7 @@ from GameMessages import Message
 
 
 class Fighter:
-    def __init__(self, hp, defense, power, xp=0, fov=2):
+    def __init__(self, hp, defense, power, xp=0, fov=2, mob_level=None):
         self.base_max_hp = hp
         self.hp = hp
         self.base_defense = defense
@@ -13,6 +13,7 @@ class Fighter:
         self.xp = xp
         self.god_mode = 0
         self.fov = fov
+        self.mob_level = mob_level
 
     @property
     def max_hp(self):

@@ -1,10 +1,15 @@
-import tcod as libtcod
+import tcod
 from tcod.image import Image as TcodImage
+
+
+from loader_functions.JsonReader import obtain_tile_set
+
+TILE_SET = obtain_tile_set()
 
 
 def picture(con, game_map, dungeon_map, header, map_width, map_height, screen_width, screen_height, panel_height):
     # create an off-screen console that represents the menu's window
-    window = libtcod.console_new(screen_width, screen_height)
+    window = tcod.console_new(screen_width, screen_height)
 
     dungeon_map.blit_2x(window, 0, 0, 0, 0, -1, -1)
 
@@ -23,39 +28,49 @@ def picture(con, game_map, dungeon_map, header, map_width, map_height, screen_wi
     else:
         true_height = -map_height // 4
 
-    libtcod.console_blit(window, true_width, true_height, map_width, map_height, 1, 0, 0, 1.0, 1.0)
-    # libtcod.console_blit(window, -map_width // 4, -map_height // 4, map_width, map_height, 1, 0, 0, 1.0, 1.0)
+    tcod.console_blit(window, true_width, true_height, map_width, map_height, 1, 0, 0, 1.0, 1.0)
+    # tcod.console_blit(window, -map_width // 4, -map_height // 4, map_width, map_height, 1, 0, 0, 1.0, 1.0)
 
 
-def menu(con, header, options, width, screen_width, screen_height):
+def menu(con, header, options, width, screen_width, screen_height, cursor_position=0):
     # Main Function to Display a Generic Menu
     if len(options) > 26:
         raise ValueError("Cannot have a menu with more than 26 options!")
 
     # Calculate total height for the header (after auto-wrap) and one line per option
-    header_height = libtcod.console_get_height_rect(con, 0, 0, width, screen_height, header)
+    header_height = tcod.console_get_height_rect(con, 0, 0, width, screen_height, header)
     height = len(options) + header_height
 
     # create an off-screen console that represents the menu's window
-    window = libtcod.console_new(width, height)
+    window = tcod.console.Console(width, height)
 
     # print the header, with auto-wrap
-    libtcod.console_set_default_foreground(window, libtcod.white)
-    libtcod.console_print_rect_ex(window, 0, 0, width, height, libtcod.BKGND_NONE, libtcod.LEFT, header)
+    tcod.console_set_default_foreground(window, tcod.white)
+    tcod.console_print_rect_ex(window, 0, 0, width, height, tcod.BKGND_NONE, tcod.LEFT, header)
 
     # print all the options is a letter-bullet-list format
     y = header_height
     letter_index = ord('a')
-    for option_text in options:
+    for i, option_text in enumerate(options):
         text = '(%s) %s' % (chr(letter_index), option_text)
-        libtcod.console_print_ex(window, 0, y, libtcod.BKGND_NONE, libtcod.LEFT, text)
+        if i == cursor_position:
+            fg = tcod.white
+            bg = tcod.light_blue
+        else:
+            fg = tcod.grey
+            bg = tcod.black
+        window.print(0, y, text,
+                     fg=fg,
+                     bg=bg,
+                     bg_blend=tcod.BKGND_NONE,
+                     alignment=tcod.LEFT)
         y += 1
         letter_index += 1
 
     # blit the contents of "window" to the root console
     x = int(screen_width / 2 - width / 2)
     y = int(screen_height / 2 - height / 2)
-    libtcod.console_blit(window, 0, 0, width, height, 0, x, y, 1.0, 0.7)
+    tcod.console_blit(window, 0, 0, width, height, 0, x, y, 1.0, 0.7)
 
 
 def inventory_menu(con, header, player, inventory_width, screen_width, screen_height):
@@ -77,26 +92,13 @@ def inventory_menu(con, header, player, inventory_width, screen_width, screen_he
     menu(con, header, options, inventory_width, screen_width, screen_height)
 
 
-def main_menu(con, background_image, screen_width, screen_height):
-    # Display the Main Menu
-    # libtcod.image_blit_2x(background_image, 0, 0, 0)
-
-    libtcod.console_set_default_foreground(0, libtcod.yellow)
-    libtcod.console_print_ex(0, int(screen_width / 2), int(screen_height / 2) - 4, libtcod.BKGND_DEFAULT, libtcod.CENTER,
-                             'TOMBS OF THE ANCIENT KINGS')
-    libtcod.console_print_ex(0, int(screen_width / 2), int(screen_height - 2), libtcod.BKGND_DEFAULT, libtcod.CENTER,
-                             'By: Sunnigen')
-
-    menu(con, '', ['New Game', 'Continue', 'Quit'], 24, screen_width, screen_height)
-
-
 def select_level(con, levels, width, screen_width, screen_height):
     # Level Selection
     # menu(con, header, options, width, screen_width, screen_height):
     #
-    libtcod.console_set_default_foreground(0, libtcod.yellow)
-    libtcod.console_print_ex(0, int(screen_width / 2), int(screen_height / 2) - 4, libtcod.BKGND_DEFAULT,
-                             libtcod.CENTER,
+    tcod.console_set_default_foreground(0, tcod.yellow)
+    tcod.console_print_ex(0, int(screen_width / 2), int(screen_height / 2) - 4, tcod.BKGND_DEFAULT,
+                             tcod.CENTER,
                              'LEVEL SELECT')
     menu(con, '', levels, width, screen_width, screen_height)
 
@@ -112,18 +114,11 @@ def level_up_menu(con, header, player, menu_width, screen_width, screen_height):
 def map_screen(con, entities, game_map, header, map_width, map_height, screen_width, screen_height, panel_height):
     # TODO: Save processing time by keeping base map as image file and modify add entities before blitting?
     dungeon_map = TcodImage(width=game_map.width, height=game_map.height)
-    color = [0, 0, 100]
+
     for x in range(game_map.width):
         for y in range(game_map.height):
-            if game_map.tileset_tiles[y][x] == 12:
-                color = [128, 0, 0]
-            elif game_map.walkable[y][x]:
-                color = [50, 50, 150]
-            elif not game_map.walkable[y][x]:
-                color = [0, 0, 100]
-            else:
-                print('no color :(')
-
+            tile = TILE_SET.get("%s" % (game_map.tileset_tiles[y][x]))
+            color = tile.get("fg_color", tile["color"])
             dungeon_map.put_pixel(x, y, color)
 
     for entity in entities:
@@ -144,42 +139,45 @@ def debug_menu(con, header, menu_width, screen_width, screen_height):
                'Level Up',
                'Go to Next Level',
                'Revive Player',
-               'Show Spawn Table']
+               'Show Spawn Table',
+               'font size 8',
+               'font size 10',
+               'font size 16']
     menu(con, header, options, menu_width, screen_width, screen_height)
 
 
 def character_screen(player, character_screen_width, character_screen_height, screen_width, screen_height):
-    window = libtcod.console_new(character_screen_width, character_screen_height)
+    window = tcod.console_new(character_screen_width, character_screen_height)
 
-    libtcod.console_set_default_foreground(window, libtcod.white)
+    tcod.console_set_default_foreground(window, tcod.white)
 
-    libtcod.console_print_rect_ex(window, 0, 1, character_screen_width, character_screen_height, libtcod.BKGND_NONE,
-                                  libtcod.LEFT, 'Character Information')
+    tcod.console_print_rect_ex(window, 0, 1, character_screen_width, character_screen_height, tcod.BKGND_NONE,
+                                  tcod.LEFT, 'Character Information')
 
-    libtcod.console_print_rect_ex(window, 0, 1, character_screen_width, character_screen_height, libtcod.BKGND_NONE,
-                                  libtcod.LEFT, 'Character Information')
+    tcod.console_print_rect_ex(window, 0, 1, character_screen_width, character_screen_height, tcod.BKGND_NONE,
+                                  tcod.LEFT, 'Character Information')
 
-    libtcod.console_print_rect_ex(window, 0, 2, character_screen_width, character_screen_height, libtcod.BKGND_NONE,
-                                  libtcod.LEFT, 'Level: {0}'.format(player.level.current_level))
+    tcod.console_print_rect_ex(window, 0, 2, character_screen_width, character_screen_height, tcod.BKGND_NONE,
+                                  tcod.LEFT, 'Level: {0}'.format(player.level.current_level))
 
-    libtcod.console_print_rect_ex(window, 0, 3, character_screen_width, character_screen_height, libtcod.BKGND_NONE,
-                                  libtcod.LEFT, 'Experience: {0}'.format(player.level.current_xp))
+    tcod.console_print_rect_ex(window, 0, 3, character_screen_width, character_screen_height, tcod.BKGND_NONE,
+                                  tcod.LEFT, 'Experience: {0}'.format(player.level.current_xp))
 
-    libtcod.console_print_rect_ex(window, 0, 4, character_screen_width, character_screen_height, libtcod.BKGND_NONE,
-                                  libtcod.LEFT, 'Experience to Level: {0}'.format(player.level.experience_to_next_level))
+    tcod.console_print_rect_ex(window, 0, 4, character_screen_width, character_screen_height, tcod.BKGND_NONE,
+                                  tcod.LEFT, 'Experience to Level: {0}'.format(player.level.experience_to_next_level))
 
-    libtcod.console_print_rect_ex(window, 0, 6, character_screen_width, character_screen_height, libtcod.BKGND_NONE,
-                                  libtcod.LEFT, 'Maximum HP: {0}'.format(player.fighter.max_hp))
+    tcod.console_print_rect_ex(window, 0, 6, character_screen_width, character_screen_height, tcod.BKGND_NONE,
+                                  tcod.LEFT, 'Maximum HP: {0}'.format(player.fighter.max_hp))
 
-    libtcod.console_print_rect_ex(window, 0, 7, character_screen_width, character_screen_height, libtcod.BKGND_NONE,
-                                  libtcod.LEFT, 'Attack: {0}'.format(player.fighter.power))
+    tcod.console_print_rect_ex(window, 0, 7, character_screen_width, character_screen_height, tcod.BKGND_NONE,
+                                  tcod.LEFT, 'Attack: {0}'.format(player.fighter.power))
 
-    libtcod.console_print_rect_ex(window, 0, 8, character_screen_width, character_screen_height, libtcod.BKGND_NONE,
-                                  libtcod.LEFT, 'Defense: {0}'.format(player.fighter.defense))
+    tcod.console_print_rect_ex(window, 0, 8, character_screen_width, character_screen_height, tcod.BKGND_NONE,
+                                  tcod.LEFT, 'Defense: {0}'.format(player.fighter.defense))
 
     x = screen_width // 2 - character_screen_width // 2
     y = screen_height // 2 - character_screen_height // 2
-    libtcod.console_blit(window, 0, 0, character_screen_width, character_screen_height, 0, x, y, 1.0, 0.7)
+    tcod.console_blit(window, 0, 0, character_screen_width, character_screen_height, 0, x, y, 1.0, 0.7)
 
 
 def message_box(con, header, width, screen_width, screen_height):
