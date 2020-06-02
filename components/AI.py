@@ -77,7 +77,8 @@ class Mob:
         self.stuck_time_max = 2  # time waiting stuck, though path exists
         self.stuck_time = 0
         self.encounter = encounter
-        self.wait_time_max = randint(4, 10)  # time waiting at objective
+        self.wait_time_max = 10
+        # self.wait_time_max = randint(4, 10)  # time waiting at objective
         self.wait_time = 0
         self.path = []
         if encounter:
@@ -91,7 +92,7 @@ class BasicMob(Mob):
         monster = self.owner
 
         # TODO: Python 2D array to numpy array is reversed.
-        dist = monster.distance_to(target)
+        dist = monster.distance_to(target.x, target.y)
         # if fov_map[target.y][target.x] and radius >= dist:
         #
         #     if radius >= dist >= 2:
@@ -165,13 +166,16 @@ class PatrolMob(Mob):
     """
     PatrolMob will move between previous room, main room and next room
     """
+    goal_x = -100
+    goal_y = -100
+
     def take_turn(self, target, fov_map, game_map, entities, radius):
         results = []
         monster = self.owner
 
         # Seek/Attack Player if in Range, otherwise Patrol to other Rooms
         # TODO: Python 2D array to numpy array is reversed.
-        dist = monster.distance_to(target)
+        # dist = monster.distance_to(target)
         # if fov_map[target.y][target.x] and radius >= dist:
         #
         #     # Close distance to Player
@@ -186,14 +190,63 @@ class PatrolMob(Mob):
         #     # Change Direction to Face Target
         #     self.direction_vector = get_direction(self.owner.x, self.owner.y, target.x, target.y)
         # else:
-            # Obtain coordinate to next room and move there
-        self.patrol(game_map.rooms)
-        # TODO: Reduce astar calculation frequency. Only use astar if stuck, map changes, objective changes, etc.
-        if not self.path:
-            room_x, room_y = self.destination_room.obtain_point_within(padding=3)
-            self.path = monster.move_astar(room_x, room_y, entities, game_map,
-                                           fov_map)
+
+        # Obtain coordinate to next room and move there
+        if hasattr(game_map, 'sub_rooms'):
+            self.patrol(game_map.sub_rooms)
         else:
+            self.patrol(game_map.rooms)
+        # self.patrol(game_map.rooms)
+        # TODO: Reduce astar calculation frequency. Only use astar if stuck, map changes, objective changes, etc.
+        if not self.path and self.wait_time < 1:
+
+            # Select a Goal that is Possible to Reach
+            # print('# Select a Goal that is Possible to Reach')
+            # print('self.destination_room:', self.destination_room)
+            # print('wait time:', self.wait_time)
+
+            room_to_avoid = None
+
+            if hasattr(game_map, 'jail_cells'):
+                for j in game_map.map.jail_cells:
+                    if j.parent_room == self.destination_room:
+                        room_to_avoid = j
+                        break
+            tries = 0
+            max_tries = 30
+
+            while tries < max_tries:
+                room_x = randint(self.destination_room.x + 1, self.destination_room.x + self.destination_room.width - 1)
+                room_y = randint(self.destination_room.y + 1, self.destination_room.y + self.destination_room.height - 1)
+                # print('\n\n room_x: %s, room_y: %s' % (room_x, room_y))
+                # print(self.destination_room.x, self.destination_room.x + self.destination_room.width,)
+                # print(self.destination_room.y, self.destination_room.y + self.destination_room.height,)
+
+                # Coordinates are Reachable and Not Obstructed by an Obstalce
+
+                if room_to_avoid:
+                    # print('Checking:', room_x, room_y, not room_to_avoid.contains(room_x, room_y),
+                    #       game_map.walkable[room_y][room_x])
+                    if not room_to_avoid.contains(room_x, room_y) and game_map.walkable[room_y][room_x]:
+                        self.goal_x, self.goal_y = room_x, room_y
+                        break
+
+                else:
+                    # print('Checking:', room_x, room_y, game_map.walkable[room_y][room_x])
+                    if game_map.walkable[room_y][room_x]:
+                        self.goal_x, self.goal_y = room_x, room_y
+                        break
+
+                self.goal_x, self.goal_y = None, None
+                tries += 1
+
+            if self.goal_x and self.goal_y:
+                self.path = monster.move_astar(self.goal_x, self.goal_y, entities, game_map, fov_map)
+                # print('new path calculated', self.path)
+            # else:
+                # print(' no new_ path calculated')
+        elif self.path:
+            # print('going on path')
             # print('NOT calculating astar')
             y, x = self.path[0]
 
@@ -213,9 +266,13 @@ class PatrolMob(Mob):
 
     def check_if_at_destination(self):
         # Check if Patrol Monster has Reached Center Coordinate of Destination Room
-        if self.owner.distance_to(self.destination_room) <= 2:
+        # print('check_if_at_destination', self.owner.distance_to(self.goal_x, self.goal_y))
+        # print('destination: (%s, %s)' % (self.destination_room.x, self.destination_room.y) )
+        if self.owner.distance_to(self.goal_x, self.goal_y) <= 2:
+            # print('true')
             return True
         # print('patroling to room #%s' % self.destination_room.room_number)
+        # print('false')
         return False
 
     def check_if_stuck(self):
@@ -226,7 +283,9 @@ class PatrolMob(Mob):
 
     def check_if_waiting(self):
         # Wait in Destination Room before Traveling Onward
+        # print('self.check_if_waiting')
         if self.wait_time < self.wait_time_max:
+            # print('I am currently waiting! Wait time currently:', self.wait_time)
             self.wait_time += 1
             self.stuck_time = 0  # reset because no longer stuck
             d = randint(0, 1)
@@ -241,7 +300,9 @@ class PatrolMob(Mob):
         - If destination reached and wait time at destination exceeded
         - If stuck for more than stuck_time_max amount of time and destination not reached
         """
+        # print('patrol')
         if self.check_if_at_destination():
+            # print('should be going to check_if_waiting')
             if self.check_if_waiting():
                 self.change_room_number(game_map_rooms)
                 return None
@@ -259,16 +320,18 @@ class PatrolMob(Mob):
 
         self.stuck_time = 0
         self.wait_time = 0
-        room_number = self.destination_room.room_number
+        room_number = game_map_rooms.index(self.destination_room)
+        # room_number = self.destination_room.room_number
         if room_number >= len(game_map_rooms):
             room_number = 0
-        self.destination_room = game_map_rooms[room_number]
+        self.destination_room = game_map_rooms[room_number - 1]
 
 
-class ConfusedMonster:
+class ConfusedMonster(Mob):
     def __init__(self, previous_ai, duration=10):
         self.previous_ai = previous_ai
         self.duration = duration
+        super(ConfusedMonster, self).__init__(previous_ai.encounter)
 
     def take_turn(self, target, fov_map, game_map, entities, radius):
         results = []

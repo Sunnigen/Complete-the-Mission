@@ -154,6 +154,7 @@ class Overworld:
 
 
         # Outerwalls
+        # TODO: Sometimes the convex hull does not generate?
         unpack_polygons = np.array([c for v in polygons for c in v])
         hull = ConvexHull(points=unpack_polygons, qhull_options='QG6')
         corner_points = []
@@ -170,7 +171,7 @@ class Overworld:
         # print('# Vertices of Outerwalls')
         for x, y in true_corner_points:
             GenerationUtils.place_tile(game_map, x - 1, y - 1, '3')
-            # def place_tile(game_map, x, y, obj):
+
 
         # Draw Lines for all Outside Vertices Forming Wall
         all_vertices = []
@@ -204,7 +205,7 @@ class Overworld:
 
         for point, neighbors in road_connections.items():
             for neighbor_point in neighbors:
-                connect_points(game_map, [point, neighbor_point], thickness=1, tile='12')
+                connect_points(game_map, [point, neighbor_point], thickness=3, tile='12')
         # print('walls:', walls)
 
         # Connect Walls
@@ -267,10 +268,10 @@ def connect_points(game_map, points, tile='1', thickness=1):
         goal_x, goal_y = int(goal[0]), int(goal[1])
         path = astar.get_path(start_x=start_y - 1, start_y=start_x - 1, goal_x=goal_y - 1, goal_y=goal_x - 1)
         total_path.extend(path)
-        if len(points) < 5:
-            print('total_path:', total_path)
-            print('start/goal points:', start_x - 1, start_y - 1, goal_x - 1, goal_y - 1)
-            print('starting points:', points)
+        # if len(points) < 5:
+        #     print('total_path:', total_path)
+        #     print('start/goal points:', start_x - 1, start_y - 1, goal_x - 1, goal_y - 1)
+        #     print('starting points:', points)
 
     # Place Tiles onto Game Map
     if total_path:

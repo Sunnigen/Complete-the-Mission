@@ -31,8 +31,8 @@ class RandomWalkAlgorithm:
         self.walk_iterations = max(self.walk_iterations, (map_width * map_height * 10))
         self.game_map = game_map
         self.dungeon_level = dungeon_level
-        self.random_walk_x = randint(2, map_width - 2)
-        self.random_walk_y = randint(2, map_height - 2)
+        self.random_walk_x = randint(self.radius, map_width - self.radius - 1)
+        self.random_walk_y = randint(self.radius, map_height - self.radius - 1)
 
         # Modify Percent Goal Depending on Dungeon Level
         # self._percentGoal = 0.1 + (self.dungeon_level * 0.015)
@@ -51,11 +51,13 @@ class RandomWalkAlgorithm:
             # Check for Encounter
             if self._filled % self.encounter_interval == 0:
                 if self.encounter_within_proximity(self.random_walk_x, self.random_walk_y):
-                    room = Circle(game_map, self.random_walk_x, self.random_walk_y, self.radius,
-                                  len(game_map.rooms) + 1)
-                    game_map.rooms.append(room)
-                    place_entities(self.game_map, self.dungeon_level, room, entities, item_table, mob_table, object_table)
-                    self.encounters.append((self.random_walk_x, self.random_walk_y))
+
+                    if self.radius < self.random_walk_x < map_width - self.radius and self.radius < self.random_walk_y < map_height - self.radius:
+                        room = Circle(game_map, self.random_walk_x, self.random_walk_y, self.radius,
+                                      len(game_map.rooms) + 1)
+                        game_map.rooms.append(room)
+                        place_entities(self.game_map, self.dungeon_level, room, entities, item_table, mob_table, object_table)
+                        self.encounters.append((self.random_walk_x, self.random_walk_y))
                 else:
                     # TODO: Find a way to not allow multiple iteration checks for encounter_within_proximity
                     # Note: The below line is a lie. We're not really filling up more spaces.

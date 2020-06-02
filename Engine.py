@@ -1,676 +1,1096 @@
 # https://github.com/marukrap/RoguelikeDevResources
 # http://bfnightly.bracketproductions.com/rustbook/chapter_16.html
+from functools import partial
 
 import numpy as np
-import tcod as libtcod
+import tcod
 import tcod.tileset
-import tcod.event as tcod_event
 
 from GameMessages import Message
 from DeathFunctions import kill_player, kill_monster
 from Entity import get_blocking_entities_at_location, get_blocking_object_at_location
 from FOVFunctions import definite_enemy_fov, initialize_fov, recompute_fov
 from GameStates import GameStates
-from InputHandlers import handle_level_select, handle_keys, handle_main_menu, handle_mouse
+from InputHandlers import handle_debug_menu, handle_no_action, handle_player_turn_keys, \
+    handle_player_dead_keys, handle_targeting_keys, handle_inventory_keys, handle_level_up_menu, \
+    handle_character_screen, no_key_action
 from loader_functions.InitializeNewGame import get_constants, get_game_variables
 from loader_functions.DataLoaders import load_game, save_game
-from Menus import main_menu, message_box, select_level
-# TODO: Is RenderFunctions.clear_all still needed?
-from RenderFunctions import render_all # clear_all
+from Menus import character_screen, debug_menu, inventory_menu, level_up_menu, map_screen, menu, message_box, \
+    select_level
+from RenderFunctions import draw_entity, get_info_under_mouse, obtain_viewport_dimensions, render_bar, render_viewport
+
+TITLE = 'Complete the Mission'
+AUTHOR = 'Sunnigen'
+CONSTANTS = get_constants()
+tcod.console_set_custom_font('assets/dejavu_wide16x16_gs_tc.png', tcod.FONT_TYPE_GREYSCALE | tcod.FONT_LAYOUT_TCOD)
+ROOT_CONSOLE = tcod.console_init_root(w=CONSTANTS['screen_width'], h=CONSTANTS['screen_height'],
+                                      title=CONSTANTS['window_title'], fullscreen=False,
+                                      renderer=tcod.RENDERER_OPENGL2, vsync=True)
+current_screen = None
+NUM_KEYS = [tcod.event.K_1, tcod.event.K_2, tcod.event.K_3, tcod.event.K_4, tcod.event.K_5, tcod.event.K_6,
+            tcod.event.K_7, tcod.event.K_8, tcod.event.K_9]
 
 
-def main():
-    # Generation Variables and Intialization of Entities
-    constants = get_constants()
+class Controller(tcod.event.EventDispatch):
+    """
+    State based Meta-class that converts user inputs(events) into commands.
+    """
+    def __init__(self, name, **kwargs):
+        self.name = name
+        super(Controller, self).__init__(**kwargs)
 
-    # Select Font and Font File Type
-    # libtcod.console_set_custom_font('assets/arial10x10.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
-    # libtcod.console_set_custom_font('assets/prestige8x8_gs_tc.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
-    libtcod.console_set_custom_font('assets/dejavu_wide16x16_gs_tc.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
-    # libtcod.console_set_custom_font('assets/lucida12x12_gs_tc.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
-    root = libtcod.console_init_root(w=constants['screen_width'], h=constants['screen_height'],
-                              title=constants['window_title'], fullscreen=False,
-                              renderer=libtcod.RENDERER_OPENGL2, vsync=True)
+    def on_enter(self):
+        pass
 
-    # Initialize Consoles
-    con = libtcod.console.Console(constants['screen_width'], constants['screen_height'])
-    panel = libtcod.console.Console(constants['screen_width'], constants['panel_height'])
-    top_panel = libtcod.console.Console(constants['screen_width'], constants['top_gui_height'])
+    def on_draw(self):
+        pass
 
-    # Initialize Game Variables
+    def ev_keydown(self, event: tcod.event.KeyDown):
+        pass
+
+    def ev_quit(self, event: tcod.event.Quit) -> None:
+        print('Exiting game.')
+        self.exit_program()
+
+    def exit_program(self):
+        raise SystemExit()
+
+
+class Title(Controller):
+    """
+    Title Screen
+    """
+    cursor_position = 0
+    menu_options = ['New Game', 'Continue', 'Quit']
+
+    def __init__(self, **kwargs):
+        super(Title, self).__init__(**kwargs)
+        self.background_image = tcod.image_load('assets/menu_background.png')
+
+        # Check if Existing Game Exists
+        try:
+            a,b,c,d,e = load_game()
+        except FileNotFoundError:
+            print('TODO: Blank out "Continue"')
+
+    def on_enter(self):
+        self.cursor_position = 0
+
+    def move_cursor(self, inc):
+        self.cursor_position = (self.cursor_position + inc) % len(self.menu_options)
+
+    def ev_keydown(self, event: tcod.event.KeyDown):
+        actions = {
+            tcod.event.K_DOWN: partial(self.move_cursor, 1),
+            tcod.event.K_UP: partial(self.move_cursor, -1),
+            tcod.event.K_KP_ENTER: partial(change_screen, self.menu_options[self.cursor_position]),
+            tcod.event.K_RETURN: partial(change_screen, self.menu_options[self.cursor_position]),
+            tcod.event.K_ESCAPE: partial(self.ev_quit, event)
+        }
+
+        for i, option in enumerate(self.menu_options):
+            actions[i + 97] = partial(change_screen, self.menu_options[i])
+
+        # elif event.sym in NUM_KEYS:
+        #     try:
+        #         change_screen(self.menu_options[NUM_KEYS.index(event.sym)])
+        #     except IndexError:
+        #         print('Menu does not go up to %s' % NUM_KEYS.index(event.sym))
+        actions.get(event.sym, no_key_action)()
+
+    def ev_mousemotion(self, event: tcod.event.MouseMotion):
+        # print(self.name, event.type)
+        pass
+
+    def on_draw(self):
+        global ROOT_CONSOLE
+        # Display the Main Menu
+        screen_width, screen_height = CONSTANTS['screen_width'], CONSTANTS['screen_height']
+        self.background_image.blit(ROOT_CONSOLE, 0, 0, 0, scale_x=1, scale_y=1, angle=0)
+
+        text_color = tcod.yellow
+        ROOT_CONSOLE.print(int(screen_width / 2), int(screen_height / 2) - 4, TITLE,
+                           fg=text_color,
+                           bg_blend=tcod.BKGND_DEFAULT,
+                           alignment=tcod.CENTER)
+        ROOT_CONSOLE.print(int(screen_width / 2), int(screen_height - 2), 'By: %s' % AUTHOR,
+                           fg=text_color,
+                           bg_blend=tcod.BKGND_DEFAULT,
+                           alignment=tcod.CENTER)
+
+        menu(ROOT_CONSOLE, '', self.menu_options, 24, screen_width, screen_height, self.cursor_position)
+
+
+class Game(Controller):
+    """
+    Game screen that houses GUI, level, message logs, etc.
+    """
     player = None
     entities = []
-    game_map = None
+    game_map = []
     message_log = None
     game_state = None
-
-    # Menu Variables
-    show_main_menu = True
-    show_level_select = True
-    show_load_error_message = False
-
-    main_menu_background_image = libtcod.image_load('assets/menu_background.png')
-
-    # Connect Keyboard and Mouse
-    key = libtcod.Key()
-    mouse = libtcod.Mouse()
-
-    # Start Game Loop
-    while True:
-        libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS | libtcod.EVENT_MOUSE, key, mouse)
-
-        # State to Show Main Menu or Game
-        if show_main_menu:
-            # Show Main Menu
-            main_menu(con, main_menu_background_image, constants['screen_width'],
-                      constants['screen_height'])
-
-            # Cannot Load Saved Game
-            if show_load_error_message:
-                message_box(con, 'No save game to load', 50, constants['screen_width'], constants['screen_height'])
-
-            libtcod.console_flush()  # Present everything onto the the screen
-
-            # User Inputs
-            action = handle_main_menu(key)
-            # mouse_action = handle_mouse(mouse)
-
-            new_game = action.get('new_game')
-            load_saved_game = action.get('load_game')
-            exit_game = action.get('exit')
-
-            # Remove Error Message if Game has been found
-            if show_load_error_message and (new_game or load_saved_game or exit_game):
-                show_load_error_message = False
-
-            # Start a New Game
-            elif new_game:
-                show_level_select = True
-                clear_console(root)
-                show_main_menu = False
-
-            # Reload Saved Game
-            # Location: ./save_files
-            elif load_saved_game:
-                try:
-                    player, entities, game_map, message_log, game_state = load_game()
-                    show_main_menu = False
-
-                except FileNotFoundError:
-                    show_load_error_message = True
-
-            elif exit_game:
-                break
-
-        elif show_level_select:
-            levels = ['Overworld', 'Flamewood Prison', 'Generic', ]
-            # con, levels, width, screen_width, screen_height
-            select_level(con, levels, 24, constants['screen_width'], constants['screen_height'])
-
-            libtcod.console_flush()  # Present everything onto the the screen
-
-            # User Inputs
-            action = handle_level_select(key)
-
-            overworld = action.get('overworld')
-            flamewood_prison = action.get('flamewood_prison')
-            generic = action.get('generic')
-            back = action.get('exit')
-
-            level = None
-
-            if back:
-                show_main_menu = True
-                show_level_select = False
-
-
-            if overworld:
-                level = 'overworld'
-            elif flamewood_prison:
-                level = 'flamewood_prison'
-            elif generic:
-                level = 'generic'
-
-            if overworld or flamewood_prison or generic:
-                player, entities, game_map, message_log, game_state = get_game_variables(constants, level=level)
-                game_state = GameStates.PLAYER_TURN
-                show_level_select = False
-
-        # Do not Show Main Menu, Show Game
-        else:
-            clear_console(con)
-            play_game(player, entities, game_map, message_log, game_state, root, con, panel, top_panel, constants)
-            show_main_menu = True
-
-
-def clear_console(root):
-    root.clear(fg=(0, 0, 0), bg=(0, 0, 0))
-
-
-def change_font(root, font, constants):
-    clear_console(root)
-    if font == 8:
-        libtcod.console_set_custom_font('assets/prestige8x8_gs_tc.png',
-                                        libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
-    if font == 10:
-        libtcod.console_set_custom_font('assets/arial10x10.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
-    if font == 16:
-        libtcod.console_set_custom_font('assets/dejavu_wide16x16_gs_tc.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
-
-    return libtcod.console_init_root(w=constants['screen_width'], h=constants['screen_height'],
-                                     title=constants['window_title'], fullscreen=False,
-                                     renderer=libtcod.RENDERER_OPENGL2, vsync=True)
-
-
-def play_game(player, entities, game_map, message_log, game_state, root, con, panel, top_panel, constants):
-    # Initialize FOV
     fov_recompute = True
-    fov_map = initialize_fov(game_map)
-    enemy_fov_map = np.zeros(fov_map.transparent.shape, dtype=bool)
-    # enemy_fov_map = initialize_fov(game_map)
-    toggle_reveal_all = 0
-
-    # Connect Keyboard and Mouse
-    key = libtcod.Key()
-    mouse = libtcod.Mouse()
-
-    # Initialize GameStates
-    game_state = GameStates.PLAYER_TURN
-    previous_game_state = game_state
-
-    # Initialize Targeting Item
+    fov_map = None
+    enemy_fov_map = None
+    reveal_all = 0
+    previous_game_state = None
     targeting_item = None
+    key = None
+    mouse = None
+    action = None
+    mouse_action = None
+    player_turn_results = []
+    mouse_pos = None  # mouse position relative to game map
+    normal_mouse_pos = None  # mouse position relative to screen
 
-    # """
-    #  !"#$&'()*+,-./0123456789:;<=>?
-    #  @[\]^_'{|}~░▒▓│—┼┤┴├┬└╥┘▀▄
-    # """
-    #
-    # j = 1
-    # x = 0
-    # har = 48
-    # for i in range(250):
-    #     if x >= 50:
-    #         j += 2
-    #         x -= 50
-    #
-    #     libtcod.console_put_char(root, x, j, i, libtcod.BKGND_NONE)
-    #     libtcod.console_put_char(root, x, j + 1, har, libtcod.BKGND_NONE)
-    #     x += 1
-    #     har += 1
-    #     if har > 57:
-    #         har = 48
-    #
-    # # Debugging Only!
-    #
-    # for x, c in enumerate([]):
-    #     libtcod.console_put_char(root, x, 1, c, libtcod.BKGND_NONE)
-    #
-    # """
-    #              ○  ◙   ►   ◄   ↕   ↑   ↓   →   ←   ↔   ▲   ▼   !   "   #   $   y   &   '   (   )   *   +   ,   -   .
-    # """
-    # char_list = [9, 10, 16, 17, 18, 24, 25, 26, 27, 29, 30, 31, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46]
-    # """
-    #              /   0   1   2   3   4   5   6   7   8   9   :   ;   <   -   >   ?   @
-    # """
-    # char_list = [47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64]
-    #
-    # """
-    #              A   B   C   D   E   F   G   H   J   K   L   M
-    # """
-    # char_list = [65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76]
-    # """
-    #              d    e    f    g    h    i    j    k    l    m    n    o    p
-    # """
-    # char_list = [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112]
-    #
-    # """
-    #                   ░    ▒    ▓    │    ┤    ╣    ║    ╗    ╝    ╜    ≈    └    ╔    ┬    ╣    ─    ┼
-    # """
-    # char_list.extend([176, 177, 178, 179, 180, 185, 186, 187, 188, 189, 191, 192, 193, 194, 195, 196, 197])
-    #
-    # """
-    #                   ╚    ╤    ╩    ╦    ╠    ═    ╬    ┘    ┌    open clo
-    #                                                                box  box
-    # """
-    # char_list.extend([200, 201, 202, 203, 204, 205, 206, 217, 218, 224, 225, 226, 227, 228, 229, 230, 231, 232])
-    #
-    # for x, c in enumerate(char_list):
-    #     libtcod.console_put_char(root, x, 13, c, libtcod.BKGND_NONE)
-    #
-    # """
-    # let mut mask : u8 = 0;
-    #
-    # if is_revealed_and_wall(map, x, y - 1) { mask +=1; }
-    # if is_revealed_and_wall(map, x, y + 1) { mask +=2; }
-    # if is_revealed_and_wall(map, x - 1, y) { mask +=4; }
-    # if is_revealed_and_wall(map, x + 1, y) { mask +=8; }
-    #
-    # walls:
-    #  0 => { 9 } // Pillar because we can't see neighbors        ○
-    #     1 => { 186 } // Wall only to the north                   ║
-    #     2 => { 186 } // Wall only to the south                  ║
-    #     3 => { 186 } // Wall to the north and south              ║
-    #     4 => { 205 } // Wall only to the west                   ═
-    #     5 => { 188 } // Wall to the north and west               ╝
-    #     6 => { 187 } // Wall to the south and west              ╗
-    #     7 => { 185 } // Wall to the north, south and west        ╣
-    #     8 => { 205 } // Wall only to the east                   ═
-    #     9 => { 200 } // Wall to the north and east               ╚
-    #     10 => { 201 } // Wall to the south and east             ╤
-    #     11 => { 204 } // Wall to the north, south and east       ╠
-    #     12 => { 205 } // Wall to the east and west              ═
-    #     13 => { 202 } // Wall to the east, west, and south       ╩
-    #     14 => { 203 } // Wall to the east, west, and north      ╦
-    # """
-    # return
+    panel = None
+    top_panel = None
+    event_panel = None
+    side_panel = None
+    popup_panel = None
 
-    # Start Game Loop
-    while True:
-        libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS | libtcod.EVENT_MOUSE, key, mouse)
+    def __init__(self, **kwargs):
+        super(Game, self).__init__(**kwargs)
+        # Preload Existing Game
+        try:
+            self.player, self.entities, self.game_map, self.message_log, self.game_state = load_game()
+            self.game_map.player = self.player  # connect player from screen to player from game_map
+            self.game_map.transparent[self.player.y][self.player.x] = True  # unblock current position
+            self.initialize_loaded_game()  # perform checks to ensure game is "truly" loaded
+        except FileNotFoundError:
+            pass
 
-        # User Inputs
-        action = handle_keys(key, game_state)
-        mouse_action = handle_mouse(mouse)
+    def on_enter(self):
+        pass
 
-        # Obtain All Actions
-        move = action.get('move')
-        wait = action.get('wait')
-        pickup = action.get('pickup')
-        show_inventory = action.get('show_inventory')
-        drop_inventory = action.get('drop_inventory')
-        inventory_index = action.get('inventory_index')
-        take_stairs = action.get('take_stairs')
-        level_up = action.get('level_up')
-        show_character_screen = action.get('show_character_screen')
-        exit = action.get('exit')
-        fullscreen = action.get('fullscreen')
+    def exit_current_game(self, parameter):
+        # Save and Exit Current Game
+        save_game(self.player, self.entities, self.game_map, self.message_log, self.game_state)
+        change_screen(parameter)
 
-        # Debug Actions
-        debug_menu = action.get('debug_menu')
-        give_level_up = action.get('give_level_up')
-        next_level = action.get('next_level')
-        reveal = action.get('reveal')
-        toggle_god_mode = action.get('god_mode')
-        revive = action.get('revive_player')
-        spawn_table = action.get('show_spawn_table')
-        font_8 = action.get('size_8_font')
-        font_10 = action.get('size_10_font')
-        font_16 = action.get('size_16_font')
+    def ev_keydown(self, event: tcod.event.KeyDown):
+        """
+        Perform Key Actions as Follows:
+        1. Look at the Game State
+        2. Look at which input function is pair with the game state
+        3. Enact functions connected to that input
+        """
+        action = MENU_HANDLING[self.game_state](engine=self, key=event, game_state=self.game_state, player=self.player)
+        try:
+            action()
+        except TypeError as error:
+            print('action:', action)
+            print('game state:', self.game_state)
+            print('previous game state', self.previous_game_state)
+            print('error:', error)
+            self.exit_program()
 
-        left_click = mouse_action.get('left_click')
-        right_click = mouse_action.get('right_click')
+        super(Game, self).ev_keydown(event)
 
-        player_turn_results = []
+    def move(self, dx, dy):
+        destination_x = self.player.x + dx
+        destination_y = self.player.y + dy
 
-        clear_console(root)
+        # Block Player from Moving Through Obstacle
+        if self.game_map.is_within_map(destination_x, destination_y):
 
-        # FOV Update
-        if fov_recompute:
-            # Update FOV for Player
-            recompute_fov(fov_map, player.x, player.y, player.fighter.fov, game_map.entrances,
-                          constants['fov_light_walls'], constants['fov_algorithm'])
-            # Update FOV for Entities
-            # Note: Doesn't do as expected, fov_map gets overwritten multiple times per entity.
-            # TODO: Combine fov calculations for all entities, that it only happens once.
-            enemy_fov_map = definite_enemy_fov(game_map, fov_map, game_map.entrances, entities, constants['fov_light_walls'],
-                                               constants['fov_algorithm'])
+            # Check if Map is Walkable
+            if not self.game_map.is_blocked(destination_x, destination_y):
+                target = get_blocking_entities_at_location(self.entities, destination_x, destination_y)
 
-        # Toggle Debug Menu
-        if debug_menu:
-            previous_game_state = game_state
-            game_state = GameStates.DEBUG_MENU
+                # Attack Entity or Move
+                if target:
+                    attack_results = self.player.fighter.attack(target)
+                    self.player_turn_results.extend(attack_results)
+                else:
+                    self.game_map.transparent[self.player.y][self.player.x] = True  # unblock previous position
+                    self.game_map.transparent[self.player.y + dy][self.player.x + dx] = False  # block new position
+                    self.update_mouse_pos(dx, dy)
+                    self.player.move(dx, dy)
+                    self.fov_recompute = True
 
-        # Debug Font
-        if font_8:
-            root = change_font(root, 8, constants)
-            message_log.add_message(Message('Font size change: 8.', libtcod.white))
-        elif font_10:
-            root = change_font(root, 10, constants)
-            message_log.add_message(Message('Font size change: 10.', libtcod.white))
-        elif font_16:
-            root = change_font(root, 16, constants)
-            message_log.add_message(Message('Font size change: 16.', libtcod.white))
+                self.game_state = GameStates.ENEMY_TURN
 
-        # Debug Toggle Reveal All
-        if reveal:
-            toggle_reveal_all = abs(toggle_reveal_all - reveal)
-            if toggle_reveal_all == 1:
-                fov_recompute = True
-                message_log.add_message(Message('Toggle Map Reveal: ON.', libtcod.white))
-            else:
-                fov_recompute = True
-                message_log.add_message(Message('Toggle Map Reveal: OFF.', libtcod.white))
-            if previous_game_state == GameStates.PLAYER_DEAD:
-                game_state = previous_game_state
-            else:
-                game_state = GameStates.PLAYER_TURN
+            # Check if Location has a Map Object by "Bumping" Into it
+            elif self.game_map.transparent[destination_y][destination_x]:
+                map_object_entity = \
+                    get_blocking_object_at_location(self.game_map.map_objects, destination_x, destination_y)
 
-        # Drawing
-        render_all(con, panel, top_panel, entities, player, game_map, fov_map, enemy_fov_map, fov_recompute, message_log,
-                   constants['screen_width'], constants['screen_height'], constants['bar_width'],
-                   constants['panel_height'], constants['panel_y'], constants['top_gui_height'], constants['top_gui_y'],
-                   mouse, game_state, constants['viewport_width'], constants['viewport_height'],
-                   toggle_reveal_all=toggle_reveal_all)
+                # Interaction with Map Object Entity
+                if map_object_entity:
+                    interact_results = self.player.fighter.interact(map_object_entity,
+                                                                    target_inventory=self.player.inventory)
+                    self.player_turn_results.extend(interact_results)
 
-        fov_recompute = False
-        # TODO: Is RenderFunctions.clear_all() still needed?
-        # clear_all(con, entities)
-        libtcod.console_flush()  # Present everything onto the the screen
+                self.game_state = GameStates.ENEMY_TURN
 
-        # Debug Level Up
-        if give_level_up:
-            # player.level.current_xp += player.level.experience_needed_to_next_level
-            message_log.add_message(Message('%s XP given to player.' % player.level.experience_needed_to_next_level,
-                                            libtcod.white))
+    def wait(self):
+        # Player Character Does Nothing for a Turn
+        self.fov_recompute = True
+        self.game_state = GameStates.ENEMY_TURN
 
-            # player.level.current_xp = player.level.experience_to_next_level
-            player_turn_results.append({'xp': player.level.experience_needed_to_next_level})
-
-            if previous_game_state == GameStates.PLAYER_DEAD:
-                game_state = previous_game_state
-            else:
-                game_state = GameStates.PLAYER_TURN
-
-        # Debug God Mode
-        if toggle_god_mode:
-            player.fighter.god_mode = abs(player.fighter.god_mode - toggle_god_mode)
-            if player.fighter.god_mode == 1:
-                message_log.add_message(Message('Toggle God Mode: ON.', libtcod.white))
-            else:
-                message_log.add_message(Message('Toggle God Mode: OFF.', libtcod.white))
-            if previous_game_state == GameStates.PLAYER_DEAD:
-                game_state = previous_game_state
-                revive = True
-            else:
-                game_state = GameStates.PLAYER_TURN
-
-        # Debug Go to Next Level
-        if next_level:
-            entities = game_map.next_floor(player, message_log, constants)
-            fov_map = initialize_fov(game_map)
-            fov_recompute = True
-            game_state = GameStates.PLAYER_TURN
-            # clear_console(root)
-            revive = True
-
-        # Debug Revive Player
-        if revive and player.fighter.hp == 0:
-            message_log.add_message(Message('Player is revived!', libtcod.white))
-            player.char = '@'
-            player.color = libtcod.white
-            player.fighter.hp = player.fighter.max_hp
-            game_state = GameStates.PLAYER_TURN
-        elif revive and game_state == GameStates.DEBUG_MENU:
-            game_state = GameStates.PLAYER_TURN
-
-        # Debug Revive Player
-        if spawn_table:
-            # TODO: Show proper menu of spawn rates
-            game_map.print_spawn_rates()
-            game_state = GameStates.PLAYER_TURN
-
-        # Player is Moving
-        if move and game_state == GameStates.PLAYER_TURN:
-            dx, dy = move
-
-            destination_x = player.x + dx
-            destination_y = player.y + dy
-
-            # Block Player from Moving Through Obstacle
-            if game_map.is_within_map(destination_x, destination_y):
-
-                # Check if Map is Walkable
-                if not game_map.is_blocked(destination_x, destination_y):
-                    target = get_blocking_entities_at_location(entities, destination_x, destination_y)
-
-                    # Attack Entity or Move
-                    if target:
-                        attack_results = player.fighter.attack(target)
-                        player_turn_results.extend(attack_results)
-                    else:
-                        game_map.transparent[player.y][player.x] = True  # unblock previous position
-                        game_map.transparent[player.y + dy][player.x + dx] = False  # block new position
-                        player.move(dx, dy)
-                        fov_recompute = True
-
-                    game_state = GameStates.ENEMY_TURN
-
-                # Check if Location has a Map Object by "Bumping" Into it
-                elif game_map.transparent[destination_y][destination_x]:
-                    map_object_entity = \
-                        get_blocking_object_at_location(game_map.map_objects, destination_x, destination_y)
-
-                    # Interaction with Map Object Entity
-                    if map_object_entity:
-                        interact_results = player.fighter.interact(map_object_entity, target_inventory=player.inventory)
-                        player_turn_results.extend(interact_results)
-
-                    game_state = GameStates.ENEMY_TURN
-
-        # Player Character "Waits"
-        elif wait:
-            fov_recompute = True
-            game_state = GameStates.ENEMY_TURN
-
+    def pickup(self):
         # Player is Attempting to Pick Up Item
-        elif pickup and game_state == GameStates.PLAYER_TURN:
+        # Loop through each entity, check if same tile as player and is an item
+        for entity in self.entities:
+            if entity.item and entity.x == self.player.x and entity.y == self.player.y:
+                pickup_results = self.player.inventory.add_item(entity)
+                self.player_turn_results.extend(pickup_results)
+                break
+        else:
+            self.message_log.add_message(Message('There is nothing here to pick up.', tcod.yellow))
 
-            # Loop through each entity, check if same tile as player and is an item
-            for entity in entities:
-                if entity.item and entity.x == player.x and entity.y == player.y:
-                    pickup_results = player.inventory.add_item(entity)
-                    player_turn_results.extend(pickup_results)
-
-                    break
-            else:
-                message_log.add_message(Message('There is nothing here to pick up.', libtcod.yellow))
-
-        # Trigger Game States to Show Inventory
-        if show_inventory:
-            previous_game_state = game_state
-            game_state = GameStates.SHOW_INVENTORY
-
-        # Trigger Game State to Allow Dropping Items:
-        if drop_inventory:
-            previous_game_state = game_state
-            game_state = GameStates.DROP_INVENTORY
-
-        # Use/Drop Item if Selected Through Inventory
-        if inventory_index is not None and previous_game_state != GameStates.PLAYER_DEAD and inventory_index < len(
-                player.inventory.items):
-            item = player.inventory.items[inventory_index]
-            if game_state == GameStates.SHOW_INVENTORY:
-                player_turn_results.extend(player.inventory.use(item, entities=entities, fov_map=fov_map))
-            elif game_state == GameStates.DROP_INVENTORY:
-                player_turn_results.extend(player.inventory.drop_item(item))
-
-        # Player Found Goal and Advances to Next Level
-        if take_stairs and game_state == GameStates.PLAYER_TURN:
-            for entity in entities:
-                if entity.stairs and entity.x == player.x and entity.y == player.y:
-                    entities = game_map.next_floor(player, message_log, constants)
-                    fov_map = initialize_fov(game_map)
-                    enemy_fov_map = np.zeros(fov_map.transparent.shape, dtype=bool)
-                    fov_recompute = True
-                    # clear_console(root)
-                    break
-            else:
-                message_log.add_message(Message('There are no stairs here.', libtcod.yellow))
-
-        # Player Levels Up
-        if level_up:
-            if level_up == 'hp':
-                player.fighter.base_max_hp += 20
-                player.fighter.hp += 20
-            elif level_up == 'str':
-                player.fighter.base_power += 1
-            elif level_up == 'def':
-                player.fighter.base_defense += 1
-
-            game_state = previous_game_state
-
+    def show_character_screen(self):
         # Toggle Character Screen
-        if show_character_screen:
-            previous_game_state = game_state
-            game_state = GameStates.CHARACTER_SCREEN
+        if self.game_state != GameStates.CHARACTER_SCREEN:
+            self.previous_game_state = self.game_state
+            self.game_state = GameStates.CHARACTER_SCREEN
+        else:
+            self.game_state = GameStates.PLAYER_TURN
 
-        # Handle Targeting for Ranged Attacks
-        if game_state == GameStates.TARGETING:
-            if left_click:
-                target_x, target_y = left_click
+    def show_inventory(self):
+        # Open Inventory to Use Items
+        if self.game_state != GameStates.SHOW_INVENTORY:
+            self.previous_game_state = self.game_state
+            self.game_state = GameStates.SHOW_INVENTORY
+        else:
+            self.game_state = GameStates.PLAYER_TURN
 
-                item_use_results = player.inventory.use(targeting_item, entities=entities, fov_map=fov_map,
-                                                        target_x=target_x, target_y=target_y)
-                player_turn_results.extend(item_use_results)
-            elif right_click:
-                player_turn_results.append({'targeting_cancelled': True})
+    def drop_inventory(self):
+        # Open Inventory to Drop Items
+        if self.game_state != GameStates.DROP_INVENTORY:
+            self.previous_game_state = self.game_state
+            self.game_state = GameStates.DROP_INVENTORY
+        else:
+            self.game_state = GameStates.PLAYER_TURN
 
-        # Exit Game or Menu OR Exit Targeting Game State
-        if exit:
-            if game_state in (GameStates.SHOW_INVENTORY, GameStates.DROP_INVENTORY, GameStates.CHARACTER_SCREEN,
-                              GameStates.DEBUG_MENU, GameStates.READ):
-                game_state = previous_game_state
+    def toggle_debug_menu(self):
+        # Toggle Debug Menu
+        if self.game_state != GameStates.DEBUG_MENU:
+            self.previous_game_state = self.game_state
+            self.game_state = GameStates.DEBUG_MENU
+        else:
+            self.game_state = GameStates.PLAYER_TURN
+
+    def take_stairs(self):
+        # Player Found Goal and Advances to Next Level
+        # if self.game_state == GameStates.PLAYER_TURN:
+        for entity in self.entities:
+            if entity.stairs and entity.x == self.player.x and entity.y == self.player.y:
+                self.entities = self.game_map.next_floor(self.player, self.message_log, CONSTANTS)
+                self.fov_map = initialize_fov(self.game_map)
+                self.enemy_fov_map = np.zeros(self.fov_map.transparent.shape, dtype=bool)
+                self.fov_recompute = True
                 # clear_console(root)
-            elif game_state == GameStates.TARGETING:
-                player_turn_results.append({'targeting_cancelled': True})
-            else:
-                # Exit the Game
-                save_game(player, entities, game_map, message_log, game_state)
-                return True
+                break
+        else:
+            self.message_log.add_message(Message('There are no stairs here.', tcod.yellow))
 
-        # Toggle Full Screen
-        if fullscreen:
-            libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
+    def level_up(self, stat):
+        # Player Levels Up
+        if stat == 'hp':
+            self.player.fighter.base_max_hp += 20
+            self.player.fighter.hp += 20
+        elif stat == 'str':
+            self.player.fighter.base_power += 1
+        elif stat == 'def':
+            self.player.fighter.base_defense += 1
+
+        self.game_state = self.previous_game_state
+
+    def handle_item(self, inventory_index):
+        # Use/Drop Item if Selected Through Inventory
+        if self.previous_game_state != GameStates.PLAYER_DEAD and inventory_index < len(self.player.inventory.items):
+            item = self.player.inventory.items[inventory_index]
+            if self.game_state == GameStates.SHOW_INVENTORY:
+                self.player_turn_results.extend(self.player.inventory.use(item, entities=self.entities, fov_map=self.fov_map))
+            elif self.game_state == GameStates.DROP_INVENTORY:
+                self.player_turn_results.extend(self.player.inventory.drop_item(item))
+
+    def targetting(self, mouse_click):
+        # Handle Targeting for Ranged Attacks
+        if mouse_click.button == tcod.event.BUTTON_LEFT:
+            target_x = self.mouse_pos[0]
+            target_y = self.mouse_pos[1]
+            item_use_results = self.player.inventory.use(self.targeting_item, entities=self.entities,
+                                                         fov_map=self.fov_map, target_x=target_x, target_y=target_y)
+            self.player_turn_results.extend(item_use_results)
+
+        elif mouse_click.button == tcod.event.BUTTON_RIGHT:
+            self.player_turn_results.append({'targeting_cancelled': True})
+
+    def exit_state(self):
+        # print('exit state! current game state is:', self.game_state)
+        if self.game_state in (GameStates.SHOW_INVENTORY, GameStates.DROP_INVENTORY, GameStates.CHARACTER_SCREEN,
+                               GameStates.DEBUG_MENU, GameStates.READ):
+            self.game_state = self.previous_game_state
+        elif self.game_state == GameStates.TARGETING:
+            self.player_turn_results.append({'targeting_cancelled': True})
+        else:
+            self.exit_current_game('title')
+
+    @staticmethod
+    def toggle_full_screen():
+        pass
+        # print('TODO: actually toggle full screen or not ...')
+
+    # PLAYER_TURN_RESULTS = {
+    #     'message': Game.display_message,
+    #     'item_added': Game.item_added,
+    #     'consumed': Game.item_consumed,
+    #     'reuseable': Game.item_reuseable,
+    #     'item_dropped': Game.item_dropped,
+    #     'equip:': Game.equip,
+    #     'targeting': Game.targetting,
+    #     'map': Game.map,
+    #     'targeting_cancelled': Game.targeting_cancelled,
+    #     'xp': Game.xp,
+    #     'chest': Game.chest
+    # }
+
+    def display_message(self, game_message):
+        self.message_log.add_message(game_message)
+
+    def item_added(self, item_added):
+        """
+
+        :param item_added: Entity.Entity
+        :return:
+        """
+        # TODO: Deal with removing items that are not entities, not ValueError handling
+        try:
+            self.entities.remove(item_added)  # how to deal with items from chest that are not entities
+        except ValueError:
+            pass  # ignore entity since it doesn't exist on map
+
+        self.game_state = GameStates.ENEMY_TURN
+
+    def item_consumed(self, *args):
+        self.game_state = GameStates.ENEMY_TURN
+
+    def item_reuseable(self, *args):
+        self.game_state = GameStates.ENEMY_TURN
+
+    def item_dropped(self, item):
+        # Add item to Map
+        self.entities.append(item)
+        self.game_state = GameStates.ENEMY_TURN
+
+    def equip_player(self, equip):
+        equip_results = self.player.equipment.toggle_equip(equip)
+        for equip_result in equip_results:
+            equipped = equip_result.get('equipped')
+            dequipped = equip_result.get('dequipped')
+
+            if equipped:
+                self.display_message(Message('You equipped the %s.' % equipped.name))
+
+            if dequipped:
+                self.display_message(Message('You removed the %s.' % dequipped.name))
+
+        self.game_state = GameStates.ENEMY_TURN
+
+    def activate_targeting_mode(self, targeting):
+        # Activate Targeting Game State to User to Mouse Select
+        self.previous_game_state = GameStates.PLAYER_TURN
+        self.game_state = GameStates.TARGETING
+        self.targeting_item = targeting
+        self.display_message(self.targeting_item.item.targeting_message)
+
+    def deactivate_targeting_mode(self, *args):
+        self.game_state = self.previous_game_state
+        self.display_message(Message('Targeting cancelled.'))
+
+    def activate_map(self, *args):
+        # Allow Document to Read On Screen
+        # TODO: Make modular to allow any other type of "reading" item
+        self.previous_game_state = GameStates.PLAYER_TURN
+        self.game_state = GameStates.READ
+
+    def obtain_xp(self, xp):
+        leveled_up = self.player.level.add_xp(xp)
+        self.display_message(Message('You gained %s experience points.' % xp))
+
+        if leveled_up:
+            self.display_message(Message('Your battle skills grow stronger! You reached level %s!' %
+                                         self.player.level.current_level, tcod.yellow))
+            self.previous_game_state = self.game_state
+            self.game_state = GameStates.LEVEL_UP
+
+    def dead_entity(self, dead_entity):
+        if dead_entity == self.player:
+            message, self.game_state = kill_player(dead_entity)
+        else:
+            message = kill_monster(dead_entity)
+            self.display_message(message)
+            # self.message_log.add_message(message)
+
+    def open_chest(self, chest):
+        if chest.inventory.empty:
+            # Change from Close Chest to Open Chest
+            self.game_map.tileset_tiles[chest.y][chest.x] = 9
+            chest.change_map_object(self.game_map.tile_set.get("9"), 9)
+        self.game_state = GameStates.ENEMY_TURN
+
+    def toggle_god_mode(self):
+        # Toggle God Mode
+        if self.player.fighter.god_mode == 0:
+            self.player.fighter.god_mode = 1
+            self.message_log.add_message(Message('Toggle God Mode: ON.', tcod.white))
+        else:
+            self.player.fighter.god_mode = 0
+            self.message_log.add_message(Message('Toggle God Mode: OFF.', tcod.white))
+
+        # Revive Player if Dead
+        if self.previous_game_state == GameStates.PLAYER_DEAD:
+            self.game_state = self.previous_game_state
+            self.revive_player()
+        else:
+            self.game_state = GameStates.PLAYER_TURN
+
+    def toggle_reveal_map(self):
+        # Debug Toggle Reveal All
+        if self.reveal_all == 0:
+            self.reveal_all = 1
+            self.message_log.add_message(Message('Toggle Map Reveal: ON.', tcod.white))
+        else:
+            self.reveal_all = 0
+            self.message_log.add_message(Message('Toggle Map Reveal: OFF.', tcod.white))
+
+        self.fov_recompute = True
+
+        if self.previous_game_state == GameStates.PLAYER_DEAD:
+            self.game_state = self.previous_game_state
+        else:
+            self.game_state = GameStates.PLAYER_TURN
+
+    def give_level_up(self):
+        # Debug Level Up
+        # player.level.current_xp += player.level.experience_needed_to_next_level
+        self.message_log.add_message(
+            Message('%s XP given to player.' % self.player.level.experience_needed_to_next_level, tcod.white))
+
+        # player.level.current_xp = player.level.experience_to_next_level
+        self.player_turn_results.append({'xp': self.player.level.experience_needed_to_next_level})
+
+        if self.previous_game_state == GameStates.PLAYER_DEAD:
+            self.game_state = self.previous_game_state
+        else:
+            self.game_state = GameStates.PLAYER_TURN
+
+    def go_to_next_level(self):
+        # Debug Go to Next Level
+        self.entities = self.game_map.next_floor(self.player, self.message_log, CONSTANTS)
+        self.fov_map = initialize_fov(self.game_map)
+        self.fov_recompute = True
+        self.game_state = GameStates.PLAYER_TURN
+        # clear_console(root)
+        self.revive_player()
+
+    def change_font_size(self, font_size):
+        # Debug Font
+        global ROOT_CONSOLE
+        ROOT_CONSOLE = change_font(ROOT_CONSOLE, font_size, CONSTANTS)
+        self.message_log.add_message(Message('Font size change: %s.' % font_size, tcod.white))
+
+    def show_spawn_table(self):
+        # TODO: Show proper menu of spawn rates
+        self.game_map.print_spawn_rates()
+        self.game_state = GameStates.PLAYER_TURN
+
+    def revive_player(self):
+        # Debug Revive Player
+        if self.player.fighter.hp == 0:
+            self.message_log.add_message(Message('Player is revived!', tcod.white))
+            self.player.char = '@'
+            self.player.color = tcod.white
+            self.player.fighter.hp = self.player.fighter.max_hp
+            self.game_state = GameStates.PLAYER_TURN
+        elif self.game_state == GameStates.DEBUG_MENU:
+            self.game_state = GameStates.PLAYER_TURN
+
+
+    def ev_mousebuttonup(self, event: tcod.event.MouseButtonUp):
+        print(event.tile)
+        if self.game_state == GameStates.TARGETING:
+            self.targetting(event)
+
+
+    def ev_mousemotion(self, event: tcod.event.MouseMotion):
+        self.set_mouse_pos(event.tile.x, event.tile.y)
+
+
+    def set_mouse_pos(self, x, y):
+        view_x_start, view_x_end, view_y_start, view_y_end = obtain_viewport_dimensions(self.game_map,
+                                                                                        CONSTANTS['viewport_width'],
+                                                                                        CONSTANTS['viewport_height']
+                                                                                        )
+        viewport_width_start = -1
+        viewport_height_start = -1
+
+        if 0 < x < CONSTANTS['viewport_width'] * 2 - 1 and \
+                0 < y < CONSTANTS['viewport_height'] * 2 - 1:
+            self.mouse_pos = (view_x_start + x + viewport_width_start,
+                              view_y_start + y + viewport_height_start)
+            self.normal_mouse_pos = (x, y)
+        else:
+            self.normal_mouse_pos = None
+            self.mouse_pos = None
+
+    def update_mouse_pos(self, dx, dy):
+        if self.mouse_pos:
+            new_x, new_y = self.mouse_pos
+            if CONSTANTS['viewport_width'] < self.player.x < CONSTANTS['map_width'] - CONSTANTS['viewport_width']:
+                new_x += dx
+
+            if CONSTANTS['viewport_height'] < self.player.y < CONSTANTS['map_height'] - CONSTANTS['viewport_height']:
+                new_y += dy
+
+            self.mouse_pos = new_x, new_y
+
+    def initialize_game(self, level):
+        # Initialize Game Variables
+        self.player, self.entities, self.game_map, self.message_log, self.game_state = get_game_variables(CONSTANTS,
+                                                                                                          level=level)
+        self.panel = tcod.console.Console(CONSTANTS['screen_width'], CONSTANTS['panel_height'])
+        self.top_panel = tcod.console.Console(CONSTANTS['screen_width'], CONSTANTS['top_gui_height'])
+        self.event_panel = tcod.console.Console(CONSTANTS['viewport_width'] * 2, CONSTANTS['viewport_height'] * 2)
+        self.side_panel = tcod.console.Console(CONSTANTS['side_panel_width'], CONSTANTS['side_panel_height'] * 2)
+
+        self.fov_recompute = True
+        self.fov_map = initialize_fov(self.game_map)
+        self.enemy_fov_map = np.zeros(self.fov_map.transparent.shape, dtype=bool)
+        self.reveal_all = 0
+        self.previous_game_state = self.game_state
+        self.targeting_item = None
+
+    def initialize_loaded_game(self):
+        self.panel = tcod.console.Console(CONSTANTS['screen_width'], CONSTANTS['panel_height'])
+        self.top_panel = tcod.console.Console(CONSTANTS['screen_width'], CONSTANTS['top_gui_height'])
+        self.fov_map = initialize_fov(self.game_map)
+        self.enemy_fov_map = np.zeros(self.fov_map.transparent.shape, dtype=bool)
+
+    def on_draw(self):
+        global ROOT_CONSOLE, PLAYER_TURN_RESULTS
+        # """
+        #  !"#$&'()*+,-./0123456789:;<=>?
+        #  @[\]^_'{|}~░▒▓│—┼┤┴├┬└╥┘▀▄
+        # """
+        #
+        # j = 1
+        # x = 0
+        # har = 48
+        # for i in range(250):
+        #     if x >= 50:
+        #         j += 2
+        #         x -= 50
+        #
+        #     tcod.console_put_char(root, x, j, i, tcod.BKGND_NONE)
+        #     tcod.console_put_char(root, x, j + 1, har, tcod.BKGND_NONE)
+        #     x += 1
+        #     har += 1
+        #     if har > 57:
+        #         har = 48ds
+        #
+        # # Debugging Only!
+        #
+        # for x, c in enumerate([]):
+        #     tcod.console_put_char(root, x, 1, c, tcod.BKGND_NONE)
+        #
+        # """
+        #              ○  ◙  ►  ◄   ↕   ↑    ↓   →   ←  ↔   ▲  ▼   !   "   #   $   y   &   '   (   )   *   +   ,   -   .
+        # """
+        # char_list = [9, 10, 16, 17, 18, 24, 25, 26, 27, 29, 30, 31, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46]
+        # """
+        #              /   0   1   2   3   4   5   6   7   8   9   :   ;   <   -   >   ?   @
+        # """
+        # char_list = [47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64]
+        #
+        # """
+        #              A   B   C   D   E   F   G   H   J   K   L   M
+        # """
+        # char_list = [65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76]
+        # """
+        #              d    e    f    g    h    i    j    k    l    m    n    o    p    q    r    s    t
+        # """
+        # char_list = [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116]
+        #
+        # """
+        #                   ░    ▒    ▓    │    ┤    ╣    ║    ╗    ╝    ╜    ≈    └    ╔    ┬    ╣    ─    ┼
+        # """
+        # char_list.extend([176, 177, 178, 179, 180, 185, 186, 187, 188, 189, 191, 192, 193, 194, 195, 196, 197])
+        #
+        # """
+        #                   ╚    ╤    ╩    ╦    ╠    ═    ╬    ┘    ┌    open clo
+        #                                                                box  box
+        # """
+        # char_list.extend([200, 201, 202, 203, 204, 205, 206, 217, 218, 224, 225, 226, 227, 228, 229, 230, 231, 232])
+        #
+        # for x, c in enumerate(char_list):
+        #     tcod.console_put_char(root, x, 13, c, tcod.BKGND_NONE)
+        #
+        # """
+        # let mut mask : u8 = 0;
+        #
+        # if is_revealed_and_wall(map, x, y - 1) { mask +=1; }
+        # if is_revealed_and_wall(map, x, y + 1) { mask +=2; }
+        # if is_revealed_and_wall(map, x - 1, y) { mask +=4; }
+        # if is_revealed_and_wall(map, x + 1, y) { mask +=8; }
+        #
+        # walls:
+        #  0 => { 9 } // Pillar because we can't see neighbors        ○
+        #     1 => { 186 } // Wall only to the north                   ║
+        #     2 => { 186 } // Wall only to the south                  ║
+        #     3 => { 186 } // Wall to the north and south              ║
+        #     4 => { 205 } // Wall only to the west                   ═
+        #     5 => { 188 } // Wall to the north and west               ╝
+        #     6 => { 187 } // Wall to the south and west              ╗
+        #     7 => { 185 } // Wall to the north, south and west        ╣
+        #     8 => { 205 } // Wall only to the east                   ═
+        #     9 => { 200 } // Wall to the north and east               ╚
+        #     10 => { 201 } // Wall to the south and east             ╤
+        #     11 => { 204 } // Wall to the north, south and east       ╠
+        #     12 => { 205 } // Wall to the east and west              ═
+        #     13 => { 202 } // Wall to the east, west, and south       ╩
+        #     14 => { 203 } // Wall to the east, west, and north      ╦
+        # """
+        # return
+        # FOV Update
 
         # Log Events that Occured During Player Turn
-        for player_turn_result in player_turn_results:
-            message = player_turn_result.get('message')
-            dead_entity = player_turn_result.get('dead')
-            item_added = player_turn_result.get('item_added')
-            item_consumed = player_turn_result.get('consumed')
-            item_reusable = player_turn_result.get('reuseable')
-            item_dropped = player_turn_result.get('item_dropped')
-            equip = player_turn_result.get('equip')
-            targeting = player_turn_result.get('targeting')
-            item_map = player_turn_result.get('map')
-            targeting_cancelled = player_turn_result.get('targeting_cancelled')
-            xp = player_turn_result.get('xp')
-            chest = player_turn_result.get('chest')
+        # Analyze Actions User Results and Propagate Resulting Events
+        for player_turn_result_dict in self.player_turn_results:
+            for result_key, result_val in player_turn_result_dict.items():
+                # print('player_turn_result:', player_turn_result)
+                # result_key = next(iter(player_turn_result))
+                # result_val = player_turn_result[result_key]
+                result_event = PLAYER_TURN_RESULTS.get(result_key, no_key_action)
+                result_event(self, result_val)  # pass dict.values()
 
-            if message:
-                message_log.add_message(message)
-
-            if targeting_cancelled:
-                game_state = previous_game_state
-
-                message_log.add_message(Message('Targeting cancelled.'))
-
-            if xp:
-                leveled_up = player.level.add_xp(xp)
-                message_log.add_message(Message('You gained %s experience points.' % xp))
-
-                if leveled_up:
-                    message_log.add_message(Message('Your battle skills grow stronger! You reached level %s!' %
-                        player.level.current_level, libtcod.yellow)
-                                            )
-                    previous_game_state = game_state
-                    game_state = GameStates.LEVEL_UP
-
-            if dead_entity:
-                if dead_entity == player:
-                    message, game_state = kill_player(dead_entity)
-                else:
-                    message = kill_monster(dead_entity)
-
-                message_log.add_message(message)
-
-            if item_added:
-                # TODO: Deal with removing items that are not entities, not ValueError handling
-                try:
-                    entities.remove(item_added)  # how to deal with items from chest that are not entities
-                except ValueError:
-                    pass  # ignore entity since it doesn't exist on map
-
-                game_state = GameStates.ENEMY_TURN
-
-            if item_consumed:
-                game_state = GameStates.ENEMY_TURN
-
-            if item_reusable:
-                game_state = GameStates.ENEMY_TURN
-
-            if item_map:
-                previous_game_state = GameStates.PLAYER_TURN
-                game_state = GameStates.READ
-
-            if targeting:
-                previous_game_state = GameStates.PLAYER_TURN
-                game_state = GameStates.TARGETING
-
-                targeting_item = targeting
-
-                message_log.add_message(targeting_item.item.targeting_message)
-
-            if item_dropped:
-                entities.append(item_dropped)
-                game_state = GameStates.ENEMY_TURN
-
-            if equip:
-                equip_results = player.equipment.toggle_equip(equip)
-                for equip_result in equip_results:
-                    equipped = equip_result.get('equipped')
-                    dequipped = equip_result.get('dequipped')
-
-                    if equipped:
-                        message_log.add_message(Message('You equipped the %s.' % equipped.name))
-
-                    if dequipped:
-                        message_log.add_message(Message('You removed the %s.' % dequipped.name))
-
-                game_state = GameStates.ENEMY_TURN
-
-            if chest:
-                # print(chest)
-                # print(player_turn_result)
-                if chest.inventory.empty:
-                    # Change from Close Chest to Open Chest
-                    game_map.tileset_tiles[chest.y][chest.x] = 9
-                    chest.change_map_object(game_map.tile_set.get("9"), 9)
-                game_state = GameStates.ENEMY_TURN
+        self.player_turn_results = []
 
         # Enemy Turn to Act
-        if game_state == GameStates.ENEMY_TURN:
-            fov_recompute = True
-            for entity in entities:
+        if self.game_state == GameStates.ENEMY_TURN:
+            self.fov_recompute = True
+            for entity in self.entities:
                 if entity.ai:
-                    enemy_turn_results = entity.ai.take_turn(player, enemy_fov_map, game_map, entities,
-                                                             constants['enemy_fov_radius'])
+                    enemy_turn_results = entity.ai.take_turn(self.player, self.enemy_fov_map, self.game_map,
+                                                             self.entities,
+                                                             CONSTANTS['enemy_fov_radius'])
 
                     for enemy_turn_result in enemy_turn_results:
                         message = enemy_turn_result.get('message')
                         dead_entity = enemy_turn_result.get('dead')
 
                         if message:
-                            message_log.add_message(message)
+                            self.message_log.add_message(message)
 
                         # Check if Player Dead or Monster Dead
                         if dead_entity:
-                            if dead_entity == player:
-                                message, game_state = kill_player(dead_entity)
+                            if dead_entity == self.player:
+                                message, self.game_state = kill_player(dead_entity)
                             else:
                                 message = kill_monster(dead_entity)
 
-                            message_log.add_message(message)
+                            self.message_log.add_message(message)
 
                     # Check if Player is Dead as a Result
-                    if game_state == GameStates.PLAYER_DEAD:
+                    if self.game_state == GameStates.PLAYER_DEAD:
                         break
             else:
-                game_state = GameStates.PLAYER_TURN
+                self.game_state = GameStates.PLAYER_TURN
 
         # TODO: Does the game need to be saved every turn?
-        # save_game(player, entities, game_map, message_log, game_state)
+        # save_game(player, entities, game_map, message_log, game_state)    
+
+        if self.fov_recompute:
+            # Update FOV for Player
+            recompute_fov(self.fov_map, self.player.x, self.player.y, self.player.fighter.fov, self.game_map.entrances,
+                          CONSTANTS['fov_light_walls'], CONSTANTS['fov_algorithm'])
+            # Update FOV for Entities
+            # Note: Doesn't do as expected, fov_map gets overwritten multiple times per entity.
+            # TODO: Combine fov calculations for all entities, that it only happens once.
+            self.enemy_fov_map = definite_enemy_fov(self.game_map, self.fov_map, self.game_map.entrances, self.entities,
+                                               CONSTANTS['fov_light_walls'],
+                                               CONSTANTS['fov_algorithm'])
+
+        # Actual Drawing
+        # self.panel.draw_frame(0, 0, CONSTANTS['screen_width'], CONSTANTS['panel_height'],
+        #                               clear=False, bg_blend=tcod.BKGND_NONE)
+        clear_console(self.event_panel)
+        view_x_start, view_x_end, view_y_start, view_y_end = obtain_viewport_dimensions(self.game_map,
+                                                                                        CONSTANTS['viewport_width'],
+                                                                                        CONSTANTS['viewport_height']
+                                                                                        )
+        # Make Viewport Smaller than Frame
+        viewport_width_start = -1
+        viewport_height_start = -1
+        view_x_end -= 2
+        view_y_end -= 2
+        # viewport_width_start = (((screen_width // 2) - viewport_width) * -1)
+        # viewport_height_start = (((screen_height // 2) - (viewport_height // 2)) // -2) + 5
+
+        # Background, Tiles, Etc.
+        render_viewport(self.event_panel, self.mouse_pos, self.game_map, self.entities, self.fov_map, self.enemy_fov_map,
+                        self.fov_recompute, self.reveal_all, view_x_start, view_x_end, view_y_start, view_y_end,
+                        viewport_width_start, viewport_height_start)
+
+        # Sort Draw Order to Sort by Render Order Enum Value
+        entities_under_mouse = []
+        entities_in_render_order = sorted(
+            [entity for entity in self.entities if view_x_start <= entity.x < view_x_end and view_y_start <= entity.y < view_y_end],
+            key=lambda x: x.render_order.value
+        )
+        # Draw all entities in the list
+        for entity in entities_in_render_order:
+            # if :
+
+            # Find Entity Under Mouse since we're looping :D
+            if self.mouse_pos:
+                # if entity.x == view_x_start + self.mouse_pos[0] + viewport_width_start and \
+                #         entity.y == view_y_start + self.mouse_pos[1] + viewport_height_start and \
+                #         self.fov_map.fov[view_y_start + self.mouse_pos[1] + viewport_height_start][view_x_start + self.mouse_pos[0] + viewport_width_start]:
+                if entity.x == self.mouse_pos[0] and entity.y == self.mouse_pos[1] and \
+                        self.fov_map.fov[self.mouse_pos[1]][self.mouse_pos[0]]:
+                    entities_under_mouse.append(entity)
+
+            draw_entity(self.event_panel, entity, self.fov_map, self.game_map, self.reveal_all, view_x_start, view_x_end,
+                        view_y_start, view_y_end, viewport_width_start, viewport_height_start)
+
+        # Create Frame around near pos
+        info = ''
+        line_count = 0
+        for entity in entities_under_mouse:
+            if entity.fighter:
+                info += '\n\n%s\n\nLv: %s\nHP: %s\nStr: %s\nDef: %s' % (entity.name, entity.fighter.mob_level, entity.fighter.hp, entity.fighter.power, entity.fighter.defense)
+                line_count += 8
+
+            elif entity.equippable:
+                info += '\n\n%s\n\n%s\n\n+HP: %s\n+STR: %s\nDEF: %s' % (entity.name, entity.equippable.description,
+                                                entity.equippable.max_hp_bonus,
+                                                entity.equippable.power_bonus,
+                                                entity.equippable.defense_bonus)
+                line_count += 18
+            elif entity.item:
+                info += '\n\n%s\n\n%s' % (entity.name, entity.item.description)
+                line_count += 18
+
+        if entities_under_mouse:
+            info_pane_width = 16
+
+            # Check left or right
+            frame_x = self.normal_mouse_pos[0] + 1  # display right
+            if self.normal_mouse_pos[0] >= CONSTANTS.get('viewport_width'):
+                frame_x = self.normal_mouse_pos[0] - info_pane_width  # display left
+
+            # Check top or bottom
+            frame_y = self.normal_mouse_pos[1]
+            if self.normal_mouse_pos[1] > CONSTANTS.get('viewport_height'):
+                frame_y = self.normal_mouse_pos[1] + 1 - line_count
+            popup_panel = tcod.console.Console(info_pane_width, line_count)
+
+            popup_panel.draw_frame(x=0, y=0, width=info_pane_width, height=line_count, title='???', fg=tcod.light_gray,
+                                   bg=tcod.black, clear=True, bg_blend=tcod.BKGND_SCREEN)
+
+            popup_panel.print_box(x=1, y=1, width=info_pane_width - 2,
+                                       height=line_count, string=info[2:])
+
+            popup_panel.blit(dest=self.event_panel, dest_x=frame_x, dest_y=frame_y, src_x=0, src_y=0,
+                                  width=info_pane_width, height=line_count)
+
+        # # Mouse Over Display
+        # mouse_info = get_info_under_mouse(self.mouse_pos, self.game_map, self.entities, self.game_map.map_objects,
+        #                                   self.fov_map, self.reveal_all, view_x_start, view_x_end, view_y_start,
+        #                                   view_y_end, CONSTANTS['viewport_width'], CONSTANTS['viewport_height'],
+        #                                   viewport_width_start, viewport_height_start)
+        #
+        # self.side_panel.print(1, 1, mouse_info, fg=tcod.light_gray, bg_blend=tcod.BKGND_NONE, alignment=tcod.LEFT)
+
+
+        # Frame
+        self.event_panel.draw_frame(0, 0, self.event_panel.width, self.event_panel.height,
+                                    title='%s Level: %s' % (self.game_map.level, self.game_map.dungeon_level),
+                                    fg=tcod.white, bg=tcod.black, clear=False, bg_blend=tcod.BKGND_DEFAULT)
+
+        # Actual Game Screen
+        self.event_panel.blit(dest=ROOT_CONSOLE, dest_x=0, dest_y=0, src_x=0, src_y=0,
+                              width=self.event_panel.width, height=self.event_panel.height)
+        # Draw Console to Screen
+
+
+        # tcod.console_blit(con, viewport_width_start, viewport_height_start, screen_width, screen_height, 0, 0, 0)
+        # print('\nCentering Viewport')
+        # print(screen_width // 2, viewport_width // 2, viewport_width_start)
+        # print(screen_height // 2, viewport_height // 2, viewport_height_start)
+
+        # Player UI Panel
+        # clear_console(self.panel)
+        self.panel.clear()
+        self.panel.draw_frame(0, 0, CONSTANTS['screen_width'], CONSTANTS['panel_height'],
+                              clear=False, bg_blend=tcod.BKGND_NONE)
+
+        # Print the game Messages, one line at a time
+        y = 1
+        for message in self.message_log.messages:
+            self.panel.print(self.message_log.x, y, message.text, fg=message.color)
+            y += 1
+
+        self.panel.blit(dest=ROOT_CONSOLE, dest_x=0, dest_y=CONSTANTS['panel_y'], src_x=0, src_y=0,
+                        width=CONSTANTS['screen_width'], height=CONSTANTS['panel_height'],)
+
+        # Side Panel for Enemy Display Status Effects etc.
+        self.side_panel.clear()
+        self.side_panel.draw_frame(0, 0, CONSTANTS['side_panel_width'], CONSTANTS['side_panel_height'], clear=False,
+                                   bg_blend=tcod.BKGND_DEFAULT)
+
+        # Display Character Level
+        self.side_panel.print(CONSTANTS['bar_width'] // 2 + 1, 1, 'Fighter Lv: %s ' % self.player.level.current_level,
+                              fg=tcod.light_gray, bg_blend=tcod.BKGND_NONE, alignment=tcod.CENTER)
+        # Render HP Bar
+        render_bar(self.side_panel, 1, 2, CONSTANTS['bar_width'], 'HP', self.player.fighter.hp,
+                   self.player.fighter.max_hp, tcod.light_red, tcod.darker_red)
+
+        # Render XP Bar
+        render_bar(self.side_panel, 1, 3, CONSTANTS['bar_width'], 'XP', self.player.level.current_xp,
+                   self.player.level.experience_to_next_level, tcod.darker_yellow, tcod.darkest_yellow)
+
+        # Display ATT/DEF
+        self.side_panel.print(1, 5, 'STR: %s\nDEF: %s' % (self.player.fighter.power, self.player.fighter.defense),
+                              fg=tcod.light_gray, bg_blend=tcod.BKGND_NONE, alignment=tcod.LEFT)
+
+        # Terrain Under Mouse Display
+        if self.mouse_pos:
+            mouse_x, mouse_y = self.mouse_pos
+
+            if self.fov_map.fov[mouse_y][mouse_x]:
+
+                tile = self.game_map.tileset_tiles[mouse_y][mouse_x]
+                _tile = self.game_map.tile_set.get("%s" % tile)
+                name = "(%s, %s): %s" % (mouse_x, mouse_y, _tile.get("name"))
+            else:
+                name = "(%s, %s)" % (mouse_x, mouse_y)
+            self.side_panel.print(1, CONSTANTS['side_panel_height'] - 2, name,
+                                  fg=tcod.light_gray, bg_blend=tcod.BKGND_NONE, alignment=tcod.LEFT)
+
+        self.side_panel.blit(dest=ROOT_CONSOLE, dest_x=CONSTANTS['viewport_width'] * 2, dest_y=0, src_x=0, src_y=0,
+                             width=CONSTANTS['side_panel_width'], height=CONSTANTS['side_panel_height'], )
+
+
+
+
+       # Entity Display
+        # # tcod.console_clear(top_panel)
+        # top_panel.clear()
+        # tcod.console_set_default_foreground(top_panel, tcod.light_gray)
+        # test = ''
+        #
+        # for i in range(1, 1000):
+        #     test += "%c%c%c%c " % (tcod.COLCTRL_FORE_RGB, random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)) + \
+        #        random.choice(string.ascii_letters) + "%c" % tcod.COLCTRL_STOP
+        #     if i % screen_width == 0:
+        #         test += " \n"
+        # # x: int, y: int, string: str, fg: Optional[Tuple[int, int, int]] = None, bg: Optional[
+        #     # Tuple[int, int, int]] = None, bg_blend: int = 1, alignment: int =
+        # top_panel.print(x=0, y=0, string=test, fg=tcod.light_gray)
+        #
+        # tcod.console_blit(top_panel, 0, 0, screen_width, top_gui_height, 0, 0, top_gui_y)
+
+        IN_GAME_MENU = {GameStates.SHOW_INVENTORY:
+                            partial(inventory_menu, ROOT_CONSOLE,
+                                    'Press the key next to an item to use it, or Esc to cancel.\n',
+                                    self.player, 50, CONSTANTS['screen_width'], CONSTANTS['screen_height']),
+                        GameStates.DROP_INVENTORY:
+                            partial(inventory_menu, ROOT_CONSOLE,
+                                    'Press the key next to an item to drop it, or Esc to cancel.\n',
+                                    self.player, 50, CONSTANTS['screen_width'], CONSTANTS['screen_height']),
+                        GameStates.DEBUG_MENU:
+                            partial(debug_menu, ROOT_CONSOLE, 'Debug Menu\n', 30, CONSTANTS['screen_width'],
+                                    CONSTANTS['screen_height']),
+                        GameStates.LEVEL_UP:
+                            partial(level_up_menu, ROOT_CONSOLE, 'Level up! Choose a stat to raise:', self.player, 30,
+                                    CONSTANTS['screen_width'], CONSTANTS['screen_height']),
+                        GameStates.CHARACTER_SCREEN:
+                            partial(character_screen, self.player, 30, 10, CONSTANTS['screen_width'],
+                                    CONSTANTS['screen_height']),
+                        GameStates.READ:
+                            partial(map_screen, ROOT_CONSOLE, self.entities, self.game_map, "Dungeon Map",
+                                    int(self.game_map.width * 0.75), int(self.game_map.height * 0.75),
+                                    CONSTANTS['screen_width'], CONSTANTS['screen_height'], CONSTANTS['panel_height'])
+        }
+
+        IN_GAME_MENU.get(self.game_state, no_key_action)()
+        self.fov_recompute = False
+
+
+class GameMode(Controller):
+    """
+    Menu to select:
+    - New Game
+        - Complete the Mission
+        - Go to Overworld
+        - Go to Undergrave Prison
+        - Go to Resinfaire Forest
+        - Go to Generic Dungeon
+    - Load Existing Game
+
+    Include making new character/selecting game parameters/etc.
+    """
+    cursor_position = 0
+    game_modes = ['New Game', 'Load Game']
+    current_mode = game_modes[cursor_position]
+    menu_names = ['Complete the Mission', 'Go to Overworld', 'Go to Undergrave Prison', 'Go to Resinfaire Forest',
+                  'Go to Generic Dungeon']
+    menu_options = ['ctm', 'overworld', 'undergrave', 'resinfaire', 'generic']
+    # initialize_game
+
+    def on_enter(self):
+        self.cursor_position = 0
+
+    def move_cursor(self, inc):
+        self.cursor_position = (self.cursor_position + inc) % len(self.menu_options)
+
+    def ev_keydown(self, event: tcod.event.KeyDown):
+        actions = {
+            tcod.event.K_DOWN: partial(self.move_cursor, 1),
+            tcod.event.K_UP: partial(self.move_cursor, -1),
+            tcod.event.K_KP_ENTER: partial(change_screen, self.menu_options[self.cursor_position]),
+            tcod.event.K_RETURN: partial(change_screen, self.menu_options[self.cursor_position]),
+            tcod.event.K_ESCAPE: partial(change_screen, 'title')
+        }
+
+        for i, option in enumerate(self.menu_options):
+            actions[i + 97] = partial(change_screen, self.menu_options[i])
+
+        actions.get(event.sym, no_key_action)()
+
+    def ev_mousemotion(self, event: tcod.event.MouseMotion):
+        # print(self.name, event.type)
+        pass
+
+    def on_draw(self):
+        global ROOT_CONSOLE
+        screen_width, screen_height = CONSTANTS['screen_width'], CONSTANTS['screen_height']
+        menu(ROOT_CONSOLE, 'Select Level', self.menu_names, 40, screen_width, screen_height, self.cursor_position)
+
+
+SCREENS = {
+    'title': Title(name='title_screen'),
+    'gamemode': GameMode(name='game_mode_screen'),
+    'game': Game(name='game_screen')
+}
+
+
+def change_screen(parameter):
+    global current_screen
+    print('change_screen', parameter)
+    if parameter == 'New Game':
+        current_screen = SCREENS.get('gamemode')
+        current_screen.on_enter()
+    elif parameter == 'Continue':
+        current_screen = SCREENS.get('game')
+    elif parameter == 'Quit':
+        current_screen.exit_program()
+    elif parameter == 'title':
+        current_screen = SCREENS.get(parameter)
+        current_screen.on_enter()
+    elif parameter == 'ctm':
+        print('NOT READY YET!!!')
+    elif parameter == 'generic':
+        SCREENS.get('game').initialize_game(parameter)
+        current_screen = SCREENS.get('game')
+    elif parameter == 'overworld':
+        SCREENS.get('game').initialize_game(parameter)
+        current_screen = SCREENS.get('game')
+    elif parameter == 'undergrave':
+        SCREENS.get('game').initialize_game(parameter)
+        current_screen = SCREENS.get('game')
+    elif parameter == 'resinfaire':
+        SCREENS.get('game').initialize_game(parameter)
+        current_screen = SCREENS.get('game')
+    else:
+        print('doing nothing :|')
+
+
+# ===============================================================
+#                         MAIN LOOP
+# ===============================================================
+MENU_HANDLING = {
+    GameStates.DEBUG_MENU: handle_debug_menu,
+    GameStates.PLAYER_TURN: handle_player_turn_keys,
+    GameStates.PLAYER_DEAD: handle_player_dead_keys,
+    GameStates.TARGETING: handle_targeting_keys,
+    GameStates.SHOW_INVENTORY: handle_inventory_keys,
+    GameStates.DROP_INVENTORY: handle_inventory_keys,
+    GameStates.LEVEL_UP: handle_level_up_menu,
+    GameStates.CHARACTER_SCREEN: handle_character_screen,
+    GameStates.READ: handle_character_screen,
+    GameStates.ENEMY_TURN: handle_no_action
+}
+
+
+PLAYER_TURN_RESULTS = {
+    'message': Game.display_message,
+    'item_added': Game.item_added,
+    'consumed': Game.item_consumed,
+    'reuseable': Game.item_reuseable,
+    'item_dropped': Game.item_dropped,
+    'equip:': Game.equip_player,
+    'targeting': Game.activate_targeting_mode,
+    'map': Game.activate_map,
+    'targeting_cancelled': Game.deactivate_targeting_mode,
+    'xp': Game.obtain_xp,
+    'chest': Game.open_chest,
+    'dead': Game.dead_entity
+}
+
+
+def main():
+    global current_screen
+    # Initialize Consoles
+    # font = 'assets/arial10x10.png'
+    # font = 'assets/prestige8x8_gs_tc.png'
+    # font = 'assets/lucida12x12_gs_tc.png'
+    font = 'assets/dejavu_wide16x16_gs_tc.png'
+    tcod.console_set_custom_font(font, tcod.FONT_TYPE_GREYSCALE | tcod.FONT_LAYOUT_TCOD)
+    current_screen = SCREENS['title']
+
+    # Game Loop
+    while True:
+        # User Events
+        handle_events()
+
+        # Rendering
+        clear_console(ROOT_CONSOLE)
+        current_screen.on_draw()
+        tcod.console_flush(ROOT_CONSOLE)
+
+
+def handle_events():
+    global current_screen
+    for event in tcod.event.get():
+        current_screen.dispatch(event)
+
+
+def clear_console(con):
+    con.clear(fg=(0, 0, 0), bg=(0, 0, 0))
+
+
+def change_font(con, font, constants):
+    # clear_console(con)
+    font_sizes = {
+        8: partial(tcod.console_set_custom_font, 'assets/prestige8x8_gs_tc.png',
+                   tcod.FONT_TYPE_GREYSCALE | tcod.FONT_LAYOUT_TCOD),
+        10: partial(tcod.console_set_custom_font, 'assets/arial10x10.png',
+                    tcod.FONT_TYPE_GREYSCALE | tcod.FONT_LAYOUT_TCOD),
+        16: partial(tcod.console_set_custom_font, 'assets/dejavu_wide16x16_gs_tc.png',
+                    tcod.FONT_TYPE_GREYSCALE | tcod.FONT_LAYOUT_TCOD)
+    }
+    font_sizes.get(font, no_key_action)()
+    return tcod.console_init_root(w=constants['screen_width'], h=constants['screen_height'],
+                                  title=constants['window_title'], fullscreen=False, renderer=tcod.RENDERER_OPENGL2,
+                                  vsync=True)
 
 
 if __name__ == '__main__':

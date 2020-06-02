@@ -26,6 +26,9 @@ class SquareRoom:
     def check_point_within_vertical(self, y):
         return self.y1 <= y <= self.y2
 
+    def __repr__(self):
+        return 'SquareRoom, x1=%s, y1=%s, x2=%s, y2=%s' % (self.x, self.y, self.x2, self.y2)
+
     @property
     def center(self):
 
@@ -43,11 +46,17 @@ class SquareRoom:
 
     @property
     def x(self):
-        return int((self.x1 + self.x2) / 2)
+        return self.x1
+    # @property
+    # def x(self):
+    #     return int((self.x1 + self.x2) / 2)
 
     @property
     def y(self):
-        return int((self.y1 + self.y2) / 2)
+        return self.y1
+    # @property
+    # def y(self):
+    #     return int((self.y1 + self.y2) / 2)
 
     @property
     def width(self):
@@ -64,16 +73,34 @@ class SquareRoom:
 
 class Circle:
     def __init__(self, game_map, x, y, r, room_number):
-        self.x = x
-        self.y = y
+        self.x1 = x - r
+        self.y1 = y - r
+        self.x2 = x + r
+        self.y2 = y + r
         self.r = r
         self.game_map = game_map
         self.room_number = room_number
         self.room_type = ''
 
     @property
+    def x(self):
+        return self.x1
+
+    @property
+    def y(self):
+        return self.y1
+
+    @property
     def center(self):
-        return self.x, self.y
+        return self.x + self.r, self.y + self.r
+
+    @property
+    def width(self):
+        return self.r + self.r
+
+    @property
+    def height(self):
+        return self.r + self.r
 
     def intersect_point(self, x2, y2):
         """
@@ -83,7 +110,7 @@ class Circle:
         circle, and the points that satisfy the above equation with < replaced by > are considered the outside the
         circle.
         """
-        return (self.x - x2) ** 2 + (self.y - y2) ** 2 < self.r ** 2
+        return (self.x + self.r - x2) ** 2 + (self.y + self.r - y2) ** 2 < self.r ** 2
 
     def check_point_within_room(self, x, y):
         return self.intersect_point(x, y)
@@ -93,10 +120,11 @@ class Circle:
 
     def obtain_point_within(self, padding=2):
         points = []
-        for x in range(self.x - self.r, self.x + self.r):
-            for y in range(self.y - self.r, self.y + self.r):
+        for x in range(self.x1, self.x2):
+            for y in range(self.y1, self.y2):
                 if self.intersect_point(x, y):
                     points.append((x, y))
+
 
         (x, y) = choice(self.game_map.obtain_open_floor(points))
         return x, y
