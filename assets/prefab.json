@@ -1,0 +1,19 @@
+{ "prison_bed": {
+        "name": "Prison Bed",
+        "width": 1,
+        "height": 2,
+        "template": ["20", "20"]
+        },
+  "toilet": {
+          "name": "Toilet",
+          "width": 1,
+          "height": 1,
+          "template": ["21"]
+        },
+  "chest": {
+          "name": "Chest",
+          "width": 1,
+          "height": 1,
+          "template": ["10"]
+  }
+}
