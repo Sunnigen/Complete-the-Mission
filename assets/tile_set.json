@@ -11,7 +11,8 @@
     "movable": false,
     "walkable": true,
     "transparent": true,
-    "fov": true
+    "fov": true,
+    "tile_cost": 0
   },
   "1": {
     "name": "Wall",
@@ -25,7 +26,8 @@
     "movable": false,
     "walkable": false,
     "transparent": false,
-    "fov": false
+    "fov": false,
+    "tile_cost": 0
   },
   "2": {
     "name": "Floor",
@@ -39,7 +41,8 @@
     "movable": false,
     "walkable": true,
     "transparent": true,
-    "fov": true
+    "fov": true,
+    "tile_cost": 1
   },
   "3": {
     "name": "Center",
@@ -47,17 +50,18 @@
     "type": "terrain",
     "glyph": "$",
     "char": 36,
-    "color": [10, 18, 50],
+    "color": [40, 40, 40],
     "fov_char": 36,
     "breakable": false,
     "movable": false,
     "walkable": true,
     "transparent": true,
-    "fov": true
+    "fov": true,
+    "tile_cost": 1
   },
   "4": {
-    "name": "Entrance",
-    "name2": "entrance",
+    "name": "unused",
+    "name2": "unused",
     "type": "terrain",
     "char": 101,
     "glyph": "e",
@@ -67,7 +71,8 @@
     "movable": false,
     "walkable": true,
     "transparent": true,
-    "fov": true
+    "fov": true,
+    "tile_cost": 2
   },
   "5": {
     "name": "Wooden Door",
@@ -85,8 +90,9 @@
     "transparent": false,
     "fov": false,
     "hp": 0,
-    "def": 999,
-    "interact_function": "unlock"
+    "def": 5,
+    "interact_function": "unlock",
+    "tile_cost": 5
   },
   "6": {
     "name": "Wooden Door",
@@ -102,10 +108,11 @@
     "movable": false,
     "walkable": true,
     "transparent": true,
-    "fov": false,
+    "fov": true,
     "hp": 0,
     "def": 999,
-    "interact_function": "nothing"
+    "interact_function": "nothing",
+    "tile_cost": 1
   },
   "7": {
     "name": "Chair",
@@ -122,7 +129,8 @@
     "walkable": true,
     "transparent": true,
     "fov": true,
-    "interact_function": "nothing"
+    "interact_function": "nothing",
+    "tile_cost": 99
   },
   "8": {
     "name": "Table",
@@ -139,7 +147,8 @@
     "walkable": false,
     "transparent": true,
     "fov": true,
-    "interact_function": "push"
+    "interact_function": "push",
+    "tile_cost": 99
    },
   "9": {
     "name": "Chest",
@@ -147,7 +156,7 @@
     "type": "object",
     "char": 224,
     "glyph": "α",
-    "color":[128, 128, 0],
+    "color":[198, 198, 0],
     "fov_char": 224,
     "spawn_chance": 100,
     "item_level": 1,
@@ -156,7 +165,9 @@
     "walkable": false,
     "transparent": true,
     "fov": true,
-    "interact_function": "empty_chest"
+    "interact_function": "empty_chest",
+    "tile_cost": 0,
+    "inventory_capacity": 3
   },
   "10": {
     "name": "Chest",
@@ -174,7 +185,9 @@
     "transparent": true,
     "fov": true,
     "inventory": true,
-    "interact_function": "open_chest"
+    "interact_function": "open_chest",
+    "tile_cost": 0,
+    "inventory_capacity": 3
   },
   "11": {
     "name": "Stairs",
@@ -189,7 +202,8 @@
     "walkable": false,
     "transparent": true,
     "fov": true,
-    "interact_function": "next_floor"
+    "interact_function": "next_floor",
+    "tile_cost": 1
   },
   "12": {
     "name": "Road",
@@ -203,7 +217,8 @@
     "movable": false,
     "walkable": true,
     "transparent": true,
-    "fov": true
+    "fov": true,
+    "tile_cost": 1
   },
 
   "13": {
@@ -214,13 +229,13 @@
     "glyph": "t",
     "color": [0, 0, 0],
     "fg_color": [0, 191, 0],
-    "fov_fg_color": [0, 191, 0],
     "fov_char": 116,
     "breakable": false,
     "movable": false,
     "walkable": false,
     "transparent": false,
-    "fov": false
+    "fov": false,
+    "tile_cost": 0
   },
 
   "14": {
@@ -231,31 +246,31 @@
     "glyph": "░",
     "color": [0, 0, 0],
     "fg_color": [255, 255, 255],
-    "fov_fg_color": [25, 25, 25],
     "fov_char": 176,
     "breakable": true,
     "movable": false,
     "walkable": false,
     "transparent": true,
-    "fov": true
+    "fov": true,
+    "tile_cost": 0
   },
 
   "15": {
     "name": "Jail Gate",
     "name2": "jail_gate",
     "type": "object",
-    "char": 68,
-    "glyph": "D",
+    "char": 71,
+    "glyph": "G",
     "color": [222, 211, 195],
     "fg_color": [158, 158, 158],
-    "fov_fg_color": [158, 158, 158],
-    "fov_char": 68,
+    "fov_char": 71,
     "breakable": true,
     "movable": false,
-    "walkable": false,
+    "walkable": true,
     "transparent": true,
     "fov": true,
-    "interact_function": "open_gate"
+    "interact_function": "open_gate",
+    "tile_cost": 99
   },
   "16":  {
     "name": "Vine",
@@ -265,13 +280,13 @@
     "glyph": "w",
     "color": [0, 0, 0],
     "fg_color": [0, 217, 0],
-    "fov_fg_color": [0, 102, 0],
     "fov_char": 119,
     "breakable": true,
     "movable": false,
     "walkable": true,
     "transparent": true,
-    "fov": true
+    "fov": true,
+    "tile_cost": 1
     },
   "17":  {
     "name": "Puddle",
@@ -280,14 +295,13 @@
     "char": 46,
     "glyph": ".",
     "color": [0, 70, 140],
-
-
     "fov_char": 46,
     "breakable": true,
     "movable": false,
     "walkable": true,
     "transparent": true,
-    "fov": true
+    "fov": true,
+    "tile_cost": 1
     },
   "18": {
     "name": "Crate",
@@ -297,13 +311,16 @@
     "glyph": "α",
     "color": [0, 0, 0],
     "fg_color": [128, 102, 64],
-    "fov_fg_color": [77, 61, 38],
     "fov_char": 224,
     "breakable": true,
     "movable": false,
     "walkable": false,
     "transparent": true,
-    "fov": true
+    "fov": true,
+    "tile_cost": 99,
+    "interact_function": "break_box",
+    "inventory_capacity": 1,
+    "inventory": true
   },
   "19": {
     "name": "Barrel",
@@ -313,17 +330,20 @@
     "glyph": "○",
     "color": [0, 0, 0],
     "fg_color": [128, 102, 64],
-    "fov_fg_color": [77, 61, 38],
     "fov_char": 9,
     "breakable": true,
     "movable": false,
     "walkable": false,
     "transparent": true,
-    "fov": true
+    "fov": true,
+    "tile_cost": 99,
+    "interact_function": "break_box",
+    "inventory_capacity": 1,
+    "inventory": true
   },
   "20": {
-    "name": "Bed",
-    "name2": "bed",
+    "name": "Jail Cot",
+    "name2": "jail_cot",
     "type": "object",
     "char": 205,
     "glyph": " ",
@@ -334,7 +354,8 @@
     "movable": false,
     "walkable": true,
     "transparent": true,
-    "fov": true
+    "fov": true,
+    "tile_cost": 1
   },
   "21":{
     "name": "Toilet",
@@ -347,8 +368,107 @@
     "fov_char": 10,
     "breakable": false,
     "movable": false,
+    "walkable": false,
+    "transparent": true,
+    "fov": true,
+    "tile_cost": 0
+  },
+  "22": {
+    "name": "Bed",
+    "name2": "guard_bed_body",
+    "type": "object",
+    "char": 205,
+    "glyph": " ",
+    "color": [128, 128, 128],
+    "fg_color": [128, 0, 0],
+    "fov_char": 205,
+    "breakable": false,
+    "movable": false,
     "walkable": true,
     "transparent": true,
-    "fov": true
+    "fov": true,
+    "tile_cost": 1
+  },
+  "23": {
+    "name": "Bed",
+    "name2": "guard_bed_head",
+    "type": "object",
+    "char": 30,
+    "glyph": "▲",
+    "color": [0, 0, 0],
+    "fg_color": [100, 133, 100],
+    "fov_char": 30,
+    "breakable": false,
+    "movable": false,
+    "walkable": false,
+    "transparent": true,
+    "fov": true,
+    "tile_cost": 0
+  },
+  "24": {
+    "name": "Alarm Bell",
+    "name2": "alarm_center",
+    "type": "object",
+    "char": 65,
+    "glyph": "A",
+    "color": [0, 0, 0],
+    "fg_color": [192, 255, 0],
+    "fov_char": 65,
+    "breakable": true,
+    "movable": false,
+    "walkable": false,
+    "transparent": true,
+    "fov": true,
+    "tile_cost": 0
+  },
+  "25": {
+    "name": "Alarm Frame",
+    "name2": "alarm_frame_horizontal",
+    "type": "object",
+    "char": 196,
+    "glyph": "─",
+    "color": [0, 0, 0],
+    "fg_color": [192, 255, 0],
+    "fov_char": 196,
+    "breakable": true,
+    "movable": false,
+    "walkable": false,
+    "transparent": true,
+    "fov": true,
+    "tile_cost": 0
+  },
+  "26": {
+    "name": "Alarm Frame",
+    "name2": "alarm_frame_vertical",
+    "type": "object",
+    "char": 179,
+    "glyph": "│",
+    "color": [0, 0, 0],
+    "fg_color": [192, 255, 0],
+    "fov_char": 179,
+    "breakable": true,
+    "movable": false,
+    "walkable": false,
+    "transparent": true,
+    "fov": true,
+    "tile_cost": 0
+   },
+  "27": {
+    "name": "Table",
+    "name2": "table_center",
+    "type": "object",
+    "char": 224,
+    "glyph": "α",
+    "color": [31, 31, 31],
+    "fg_color": [191, 191, 191],
+    "fov_char": 224,
+    "breakable": true,
+    "movable": false,
+    "walkable": false,
+    "transparent": true,
+    "fov": true,
+    "interact_function": "table_pick_up",
+    "tile_cost": 99,
+    "inventory_capacity": 1
   }
 }

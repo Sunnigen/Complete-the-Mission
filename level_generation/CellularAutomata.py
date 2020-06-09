@@ -126,7 +126,8 @@ class CellularAutomata:
                     possible_areas.append((center_x, center_y))
 
         # Among All Possible Areas, Remove Close Areas
-        encounter_spread_factor = randint(3, 6)  # spread out factor
+        encounter_spread_factor = 10  # spread out factor
+        # encounter_spread_factor = randint(3, 6)  # spread out factor
         radius = min(self.width // encounter_spread_factor, self.height // encounter_spread_factor)
         areas = []
         while possible_areas:
@@ -142,7 +143,10 @@ class CellularAutomata:
                     if self.inside_circle(center_x, center_y, x, y, radius) and (x, y) in possible_areas and \
                             (x, y) != (center_x, center_y):
                         possible_areas.remove((x, y))
-            areas.append((center_x, center_y))
+
+            area = AreaofInterest(x=center_x-1, y=center_y-1, width=3, height=3)
+            areas.append(area)
+            # areas.append((center_x, center_y))
         self.areas_of_interest = areas
         
     def flood_find_empty(self):
@@ -182,6 +186,34 @@ class CellularAutomata:
         #     print("Failed to produce a big enough cave after {0} tries...".format(self.flood_tries))
         # else:
         #     print("Percentage of open space: {0}%".format(percentage))
+
+
+class AreaofInterest:
+
+    def __init__(self, x, y, width, height):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+
+    def contains(self, x, y):
+        return (
+                self.x <= x < self.x + self.width
+                and self.y <= y < self.y + self.height
+        )
+
+    @property
+    def size(self):
+        return self.width * self.height
+
+    def __repr__(self):
+        return "Area of Interest at (%s, %s) with width/height: (%s, %s)" % (self.x, self.y, self.width, self.height)
+
+    @property
+    def center(self):
+        x = self.x + self.width // 2
+        y = self.y + self.height // 2
+        return x, y
 
 
 if __name__ == "__main__":

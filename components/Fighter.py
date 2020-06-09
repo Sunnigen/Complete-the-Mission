@@ -42,18 +42,14 @@ class Fighter:
 
     def take_damage(self, amount):
         results = []
+        self.hp = max(0, self.hp - amount)
 
-        # TODO: Proper God Mode will have increase att, def and HP shown and references in combat logs.
-        if self.god_mode > 0:
-            return results
-
-        if self.hp - amount < 0:
-            self.hp = 0
-        else:
-            self.hp -= amount
-
+        # Entity has Died!
         if self.hp <= 0:
-            results.append({'dead': self.owner, 'xp': self.xp})
+            if self.xp != 0:
+                results.append({'dead': self.owner, 'xp': self.xp})
+            else:
+                results.append({'dead': self.owner})
         return results
 
     def heal(self, amount):
@@ -64,7 +60,14 @@ class Fighter:
 
     def attack(self, target):
         results = []
-        damage = self.power - target.fighter.defense
+
+        # TODO: Proper God Mode will have increase att, def and HP shown and references in combat logs.
+        if target.fighter.god_mode > 0:
+            damage = 0
+            # results.append({'message': Message('The attack did nothing to the %s.' % self.owner.name)})
+        else:
+            damage = self.power - target.fighter.defense
+
 
         if damage > 0:
             results.append({'message': Message('%s attacks %s for %s hit points.' % (
@@ -78,19 +81,6 @@ class Fighter:
         return results
 
     def interact(self, entity, **kwargs):
-        # Process through Map Object's Use Function
-        # inventory = entity.inventory
-        print('\ninteract')
-        # print('map_object:', map_object)
-        # print('map_object name:', map_object.name)
-        # print('map_object char:', map_object.char)
-        # print('kwargs:', kwargs)
-        # if inventory:
-        #     print('inventory items:', inventory.items)
-        #     for item in inventory.items:
-        #         print(item.name)
-        # else:
-        #     print('no inventory :(')
         results = []
         map_object_component = entity.map_object
 
@@ -101,7 +91,7 @@ class Fighter:
             """
             kwargs = {**map_object_component.function_kwargs, **kwargs}
 
-            # Process "interact_function"
+            # Process map object's "interact_function"
             map_use_results = map_object_component.interact_function(self.owner, entity, **kwargs)
             results.extend(map_use_results)
 

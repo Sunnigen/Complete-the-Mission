@@ -8,10 +8,24 @@
     "equippable": false,
     "amount": 40,
     "use_function": "heal",
-    "spawn_chance": 35,
+    "spawn_chance": 75,
     "item_level": 1,
     "unique": false,
     "description": "A potion containing green liquid. Most likely a healing potion."
+  },
+  "poison_vial": {
+    "name": "Poison Vial",
+    "char": 33,
+    "glyph": "!",
+    "color": [115, 255, 115],
+    "type": "consumable",
+    "equippable": false,
+    "amount": 200,
+    "use_function": "poison",
+    "spawn_chance": 75,
+    "item_level": 1,
+    "unique": false,
+    "description": "A potion containing a bright green liquid. Maybe it's a healing potion?"
   },
 
   "fireball_scroll": {
@@ -22,13 +36,13 @@
     "type": "consumable",
     "equippable": false,
     "amount": 0,
-    "damage": 25,
+    "damage": 500,
     "radius": 3,
     "range": 0,
     "use_function": "cast_fireball",
     "targeting":true,
     "targeting_message": "Left-click a target area for the fireball, or right-click to cancel.",
-    "spawn_chance": 50,
+    "spawn_chance": 75,
     "item_level": 1,
     "unique": false,
     "description": "A scroll of ancient glyphs written in red, you can see that the words twist outwards in forming a ball."
@@ -47,7 +61,7 @@
     "range": 5,
     "use_function": "cast_lightning",
     "targeting": false,
-    "spawn_chance": 50,
+    "spawn_chance": 75,
     "item_level": 1,
     "unique": false,
     "description": "A faint aura emits from the ancient glyphs written down in this scroll."
@@ -66,7 +80,7 @@
     "use_function": "cast_confuse",
     "targeting": true,
     "targeting_message": "Left-click an enemy to confuse it, or right-click to cancel.",
-    "spawn_chance": 50,
+    "spawn_chance": 75,
     "item_level": 1,
     "unique": false,
     "description": "The amount of words written in purple are too numerous to count. Especially at a time like this!"
@@ -83,10 +97,10 @@
     "defense": 0,
     "hp": 0,
     "slot": "EquipmentSlots.MAIN_HAND",
-    "spawn_chance": 5,
+    "spawn_chance": 75,
     "item_level": 4,
     "unique": false,
-    "description": "The usual-weapon-of-choice for any sword-bearing-soldier."
+    "description": "The usual-weapon-of-choice for any sword-bearing-fighter."
   },
 
   "dagger": {
@@ -100,7 +114,7 @@
     "defense": 0,
     "hp": 0,
     "slot": "EquipmentSlots.MAIN_HAND",
-    "spawn_chance": 5,
+    "spawn_chance": 75,
     "item_level": 1,
     "unique": false,
     "description": "A weak but quick, solution to any hand-to-hand combat."
@@ -113,13 +127,29 @@
     "type": "equip",
     "equippable": true,
     "attack": 0,
-    "defense": 1,
+    "defense": 2,
     "hp": 0,
     "slot": "EquipmentSlots.OFF_HAND",
-    "spawn_chance": 15,
+    "spawn_chance": 75,
     "item_level": 4,
     "unique": false,
     "description": "The usual-shield-of-choice for any shield-bearing-soldier."
+  },
+
+  "wooden_shield":{
+    "name": "Wooden Shield",
+    "char": "[",
+    "color":[158, 134, 100],
+    "type": "equip",
+    "equippable": true,
+    "attack": 0,
+    "defense": 1,
+    "hp": 0,
+    "slot": "EquipmentSlots.OFF_HAND",
+    "spawn_chance": 75,
+    "item_level": 4,
+    "unique": false,
+    "description": "The original wooden fortress."
   },
 
   "bread": {
@@ -131,7 +161,7 @@
     "amount": 10,
     "use_function": "heal",
     "spawn_chance": 10,
-    "item_level": 1,
+    "item_level": 100,
     "hunger": 50,
     "unique": false,
     "description": "Bread that has aged a few days but not enough to crack your teeth during consumption."
@@ -144,7 +174,7 @@
     "type": "reuseable",
     "use_function": "read",
     "spawn_chance": 0,
-    "item_level": 1,
+    "item_level": 100,
     "text": "Hello World!",
     "unique": false,
     "description": "Barely legible document containing information about this prison level, including prisoners, guard schedules and stocked supplies."
@@ -156,7 +186,7 @@
     "type": "reuseable",
     "use_function": "read",
     "spawn_chance": 0,
-    "item_level": 1,
+    "item_level": 100,
     "text": "",
     "unique": true,
     "description": "Useful to gaining your bearings aroung this area."

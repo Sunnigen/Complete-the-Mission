@@ -67,57 +67,103 @@ def get_direction(x1, y1, x2, y2):
     if not direction:
         print('could not find direction!')
         print(x1, x2, y2, y2)
-        direction = get_random_direction()
+        direction = choice(list(DIRECTIONS.keys()))
     return DIRECTIONS.get(direction)
 
 
 class Mob:
+    """
+    Mob -> Can Find closest Target and Attack
+    """
+
     def __init__(self, encounter=None, *args, **kwargs):
         self.direction_vector = get_random_direction()
         self.stuck_time_max = 2  # time waiting stuck, though path exists
         self.stuck_time = 0
         self.encounter = encounter
-        self.wait_time_max = 10
-        # self.wait_time_max = randint(4, 10)  # time waiting at objective
-        self.wait_time = 0
         self.path = []
+        self.current_target = None
         if encounter:
             self.destination_room = encounter.main_room
+            # print('self.destination_room:', self.destination_room)
+
+    def advance_on_current_target(self, entities, game_map, fov_map, dist, radius, results):
+        mob = self.owner
+        attack_range = 1.5
+
+        # print('\n%s advancing attack: %s' % (self.owner.name, self.current_target.name))
+        # print(self.owner.x, self.owner.y, self.current_target.x, self.current_target.y)
+        # print('current path:', self.path)
+
+        # Change Direction to Face Target
+        self.direction_vector = get_direction(self.owner.x, self.owner.y, self.current_target.x, self.current_target.y)
+
+        # Close distance to Target
+        if radius >= dist > attack_range and not self.path:
+            self.path = mob.move_astar(self.current_target.x, self.current_target.y, entities, game_map, fov_map)
+            # print('# Close distance to Target')
+            results.extend(self.move_on_path(game_map, results))
+
+        # Target is Within Range, Attack
+        # TODO: Attach Range Variable
+        elif self.current_target.fighter.hp > 0 and \
+                mob.distance_to(self.current_target.x, self.current_target.y) <= attack_range:
+            # print('# Target is Within Range, Attack')
+            attack_results = mob.fighter.attack(self.current_target)
+            results.extend(attack_results)
+
+        elif radius >= dist > attack_range and self.path:
+            # Continue on Path
+            results.extend(self.move_on_path(game_map, results))
+
+        return results
+
+    def move_on_path(self, game_map, results):
+        y, x = self.path[0]
+
+        # Check if Entity in the way
+        # TODO: Replace with recalculation of path using a cost map
+        if not game_map.transparent[y][x] or not game_map.walkable[y][x]:
+            self.stuck_time += 1
+            return results
+
+        self.path.pop(0)
+        self.direction_vector = get_direction(self.owner.x, self.owner.y, x, y)
+        game_map.transparent[self.owner.y][self.owner.x] = True  # unblock previous position
+        game_map.transparent[y][x] = False  # block new position# Update Position
+        self.owner.x = x
+        self.owner.y = y
+        # print('path left:', self.path)
+        return []
 
 
-class BasicMob(Mob):
-
-    def take_turn(self, target, fov_map, game_map, entities, radius):
+    def take_turn(self, fov_map, game_map, entities):
         results = []
-        monster = self.owner
+        mob = self.owner
+        radius = self.owner.fighter.fov
 
-        # TODO: Python 2D array to numpy array is reversed.
-        dist = monster.distance_to(target.x, target.y)
-        # if fov_map[target.y][target.x] and radius >= dist:
-        #
-        #     if radius >= dist >= 2:
-        #
-        #         # monster.move_towards(target.x, target.y, game_map, entities)
-        #         monster.move_astar(target.x, target.y, entities, game_map, fov_map)
-        #
-        #     elif target.fighter.hp > 0 and monster.distance_to(target) <= 2:
-        #         # print('The {0} insults you! Your ego is damaged!'.format(monster.name))
-        #         # monster.fighter.attack(target)
-        #         attack_results = monster.fighter.attack(target)
-        #         results.extend(attack_results)
-        #
-        #     # Change Direction to Face Target
-        #     self.direction_vector = get_direction(self.owner.x, self.owner.y, target.x, target.y)
-        # else:
+        if self.current_target:
+            dist = mob.distance_to(self.current_target.x, self.current_target.y)
+            if fov_map[self.current_target.y][self.current_target.x] and radius >= dist:
+                results = self.advance_on_current_target(entities, game_map, fov_map, dist, radius, results)
+
+            else:
+                self.idle_guard()
+
+        else:
+            self.idle_guard()
+        return results
+
+    def idle_guard(self):
+        self.current_target = None
         d = randint(0, 4)
         if d == 1:
             self.direction_vector = get_random_direction()
-        return results
 
 
 class DefensiveMob(Mob):
     """
-    DefensiveMob will chase, but return to main room
+    Defensive -> Return to origin if no target
     """
 
     def __init__(self, **kwargs):
@@ -125,147 +171,128 @@ class DefensiveMob(Mob):
         self.origin_y = kwargs.get('origin_y')
         super(DefensiveMob, self).__init__(**kwargs)
 
-    def take_turn(self, target, fov_map, game_map, entities, radius):
+    def take_turn(self, fov_map, game_map, entities):
         results = []
-        monster = self.owner
+        mob = self.owner
+        radius = self.owner.fighter.fov
 
         # TODO: Python 2D array to numpy array is reversed.
-        dist = monster.distance_to(target)
-        if fov_map[target.y][target.x] and radius >= dist:
-
-            if radius >= dist >= 2:
-
-                # monster.move_towards(target.x, target.y, game_map, entities)
-                monster.move_astar(target.x, target.y, entities, game_map, fov_map)
-
-            elif target.fighter.hp > 0 and monster.distance_to(target) <= 2:
-                # print('The {0} insults you! Your ego is damaged!'.format(monster.name))
-                # monster.fighter.attack(target)
-                attack_results = monster.fighter.attack(target)
-                results.extend(attack_results)
-
-            # Change Direction to Face Target
-            self.direction_vector = get_direction(self.owner.x, self.owner.y, target.x, target.y)
+        # print('\n\ntake_turn')
+        # print('current_target:', self.current_target)
+        # print('curr pos: (%s, %s)' % (self.owner.x, self.owner.y))
+        # print('origin: (%s, %s)' % (self.origin_x, self.origin_y))
+        # print(self.owner.x != self.origin_x or self.owner.y != self.origin_y)
+        if self.current_target:
+            dist = mob.distance_to(self.current_target.x, self.current_target.y)
+            if fov_map[self.current_target.y][self.current_target.x] and radius >= dist:
+                results = self.advance_on_current_target(entities, game_map, fov_map, dist, radius, results)
+            else:
+                self.current_target = None
 
         # Check if Within Main Area
-        elif self.owner.x != self.origin_x and self.owner.y != self.origin_y:
-        # elif not self.encounter.main_room.check_point_within_room(self.owner.x, self.owner.y):
+        elif self.owner.x != self.origin_x or self.owner.y != self.origin_y:
+
+            if self.stuck_time > self.stuck_time_max:
+                self.path = []
+                self.current_target = None
+                self.stuck_time = 0
+
             # Move Back to Origin Spot
             # TODO: Why doesn't the mob go back to the same exact area?
-            # print('I need to go back to my origin spot! Origin(%s, %s), Current(%s, %s)' %
-            #       (self.origin_x, self.origin_y, self.owner.x, self.owner.y))
-            monster.move_astar(self.origin_x, self.origin_y, entities, game_map, fov_map)
+            if not self.path:
+                self.path = mob.move_astar(self.origin_x, self.origin_y, entities, game_map, fov_map)
+                # print('new path made:', self.path)
+                results.extend(self.move_on_path(game_map, results))
+            else:
+                # Continue on Existing Path
+                # print('# Continue on Existing Path')
+                results.extend(self.move_on_path(game_map, results))
         else:
-            d = randint(0, 4)
-            if d == 1:
-                self.direction_vector = get_random_direction()
+            self.idle_guard()
+
         return results
 
 
 class PatrolMob(Mob):
     """
-    PatrolMob will move between previous room, main room and next room
+    Patrol -> Will move between areas of interest contained within map
     """
     goal_x = -100
     goal_y = -100
 
-    def take_turn(self, target, fov_map, game_map, entities, radius):
+    wait_time_max = 20
+    wait_time = 0
+
+    def take_turn(self, fov_map, game_map, entities):
         results = []
-        monster = self.owner
+        mob = self.owner
+        radius = self.owner.fighter.fov
 
         # Seek/Attack Player if in Range, otherwise Patrol to other Rooms
         # TODO: Python 2D array to numpy array is reversed.
-        # dist = monster.distance_to(target)
-        # if fov_map[target.y][target.x] and radius >= dist:
-        #
-        #     # Close distance to Player
-        #     if radius+1 >= monster.distance_to(target) >= 2:
-        #         monster.move_astar(target.x, target.y, entities, game_map, fov_map)
-        #
-        #     # Player is Within Range, Attack
-        #     elif target.fighter.hp > 0 and monster.distance_to(target) <= 2:
-        #         attack_results = monster.fighter.attack(target)
-        #         results.extend(attack_results)
-        #
-        #     # Change Direction to Face Target
-        #     self.direction_vector = get_direction(self.owner.x, self.owner.y, target.x, target.y)
-        # else:
+        if self.current_target:
 
-        # Obtain coordinate to next room and move there
-        if hasattr(game_map, 'sub_rooms'):
-            self.patrol(game_map.sub_rooms)
+            dist = mob.distance_to(self.current_target.x, self.current_target.y)
+            if fov_map[self.current_target.y][self.current_target.x] and radius >= dist:
+                results = self.advance_on_current_target(entities, game_map, fov_map, dist, radius, results)
+            else:
+                self.idle_guard()
         else:
-            self.patrol(game_map.rooms)
-        # self.patrol(game_map.rooms)
-        # TODO: Reduce astar calculation frequency. Only use astar if stuck, map changes, objective changes, etc.
-        if not self.path and self.wait_time < 1:
 
-            # Select a Goal that is Possible to Reach
-            # print('# Select a Goal that is Possible to Reach')
-            # print('self.destination_room:', self.destination_room)
-            # print('wait time:', self.wait_time)
+            # Obtain coordinate to next room and move there
+            if hasattr(game_map, 'sub_rooms'):
+                self.patrol(game_map.sub_rooms)
+            else:
+                self.patrol(game_map.rooms)
 
-            room_to_avoid = None
+            # Establish a New Path or Continue on Existing Path
+            if not self.path and self.wait_time < 1:
 
-            if hasattr(game_map, 'jail_cells'):
-                for j in game_map.map.jail_cells:
-                    if j.parent_room == self.destination_room:
-                        room_to_avoid = j
-                        break
-            tries = 0
-            max_tries = 30
+                # Select a Goal that is Possible to Reach
+                room_to_avoid = None
 
-            while tries < max_tries:
-                room_x = randint(self.destination_room.x + 1, self.destination_room.x + self.destination_room.width - 1)
-                room_y = randint(self.destination_room.y + 1, self.destination_room.y + self.destination_room.height - 1)
-                # print('\n\n room_x: %s, room_y: %s' % (room_x, room_y))
-                # print(self.destination_room.x, self.destination_room.x + self.destination_room.width,)
-                # print(self.destination_room.y, self.destination_room.y + self.destination_room.height,)
+                if hasattr(game_map, 'jail_cells'):
+                    for j in game_map.map.jail_cells:
+                        if j.parent_room == self.destination_room:
+                            room_to_avoid = j
+                            break
 
-                # Coordinates are Reachable and Not Obstructed by an Obstalce
+                # Select a Possible Random Point in Next Area of Interest
+                tries = 0
+                max_tries = 30
+                while tries < max_tries:
+                    room_x = randint(self.destination_room.x + 1, self.destination_room.x + self.destination_room.width - 1)
+                    room_y = randint(self.destination_room.y + 1, self.destination_room.y + self.destination_room.height - 1)
 
-                if room_to_avoid:
-                    # print('Checking:', room_x, room_y, not room_to_avoid.contains(room_x, room_y),
-                    #       game_map.walkable[room_y][room_x])
-                    if not room_to_avoid.contains(room_x, room_y) and game_map.walkable[room_y][room_x]:
-                        self.goal_x, self.goal_y = room_x, room_y
-                        break
+                    # Coordinates are Reachable and Not Obstructed by an Obstacle
+                    if room_to_avoid:
+                        if not room_to_avoid.contains(room_x, room_y) and game_map.walkable[room_y][room_x]:
+                            self.goal_x, self.goal_y = room_x, room_y
+                            break
+                    else:
+                        # Check if Random Coordinates are Reachable
+                        if game_map.walkable[room_y][room_x]:
+                            self.goal_x, self.goal_y = room_x, room_y
+                            break
 
-                else:
-                    # print('Checking:', room_x, room_y, game_map.walkable[room_y][room_x])
-                    if game_map.walkable[room_y][room_x]:
-                        self.goal_x, self.goal_y = room_x, room_y
-                        break
+                    self.goal_x, self.goal_y = None, None
+                    tries += 1
 
-                self.goal_x, self.goal_y = None, None
-                tries += 1
+                # Finally Move To Suitable Coordinate
+                if self.goal_x and self.goal_y:
+                    self.path = mob.move_astar(self.goal_x, self.goal_y, entities, game_map, fov_map)
 
-            if self.goal_x and self.goal_y:
-                self.path = monster.move_astar(self.goal_x, self.goal_y, entities, game_map, fov_map)
-                # print('new path calculated', self.path)
-            # else:
-                # print(' no new_ path calculated')
-        elif self.path:
-            # print('going on path')
-            # print('NOT calculating astar')
-            y, x = self.path[0]
+                    if self.path:
+                        results.extend(self.move_on_path(game_map, results))
 
-            # Check if Entity in the way
-            if not game_map.transparent[y][x]:
-                # print('path found but an entity blocks the way')
-                self.stuck_time += 1
-                return results
-            self.path.pop(0)
-            self.direction_vector = get_direction(self.owner.x, self.owner.y, x, y)
-            game_map.transparent[self.owner.y][self.owner.x] = True  # unblock previous position
-            game_map.transparent[y][x] = False  # block new position# Update Position
-            self.owner.x = x
-            self.owner.y = y
+            elif self.path:
+                # Continue on Existing Path
+                results.extend(self.move_on_path(game_map, results))
 
         return results
 
     def check_if_at_destination(self):
-        # Check if Patrol Monster has Reached Center Coordinate of Destination Room
+        # Check if Patrol mob has Reached Center Coordinate of Destination Room
         # print('check_if_at_destination', self.owner.distance_to(self.goal_x, self.goal_y))
         # print('destination: (%s, %s)' % (self.destination_room.x, self.destination_room.y) )
         if self.owner.distance_to(self.goal_x, self.goal_y) <= 2:
@@ -274,6 +301,7 @@ class PatrolMob(Mob):
         # print('patroling to room #%s' % self.destination_room.room_number)
         # print('false')
         return False
+
 
     def check_if_stuck(self):
         if self.stuck_time < self.stuck_time_max:
@@ -327,27 +355,40 @@ class PatrolMob(Mob):
         self.destination_room = game_map_rooms[room_number - 1]
 
 
-class ConfusedMonster(Mob):
+class FleeMob(Mob):
+    def __init__(self, previous_ai):
+        self.previous_ai = previous_ai
+        super(FleeMob, self).__init__(previous_ai.encounter)
+
+    def take_turn(self, fov_map, game_map, entities):
+        results = []
+        mob = self.owner
+
+        return results
+
+
+class ConfusedMob(Mob):
     def __init__(self, previous_ai, duration=10):
         self.previous_ai = previous_ai
         self.duration = duration
-        super(ConfusedMonster, self).__init__(previous_ai.encounter)
+        super(ConfusedMob, self).__init__(previous_ai.encounter)
 
-    def take_turn(self, target, fov_map, game_map, entities, radius):
+    def take_turn(self, fov_map, game_map, entities):
         results = []
+        mob = self.owner
 
         # Confused Monster AI
         if self.duration > 0:
-            random_x = self.owner.x + randint(0, 2) - 1
-            random_y = self.owner.y + randint(0, 2) - 1
+            random_x = mob.x + randint(0, 2) - 1
+            random_y = mob.y + randint(0, 2) - 1
 
-            if random_x != self.owner.x and random_y != self.owner.y:
-                self.owner.move_towards(random_x, random_y, game_map, entities)
+            if random_x != mob.x and random_y != mob.y:
+                mob.move_towards(random_x, random_y, game_map, entities)
 
             self.duration -= 1
         else:
             # Confusion Wore Off
-            self.owner.ai = self.previous_ai
-            results.append({'message': Message('The %s is no longer confused!' % self.owner.name, libtcod.red)})
+            mob.ai = self.previous_ai
+            results.append({'message': Message('The %s is no longer confused!' % mob.name, libtcod.red)})
 
         return results

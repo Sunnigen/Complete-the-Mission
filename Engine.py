@@ -50,7 +50,7 @@ class Controller(tcod.event.EventDispatch):
         pass
 
     def ev_quit(self, event: tcod.event.Quit) -> None:
-        print('Exiting game.')
+        print('Terminating program.')
         self.exit_program()
 
     def exit_program(self):
@@ -202,8 +202,20 @@ class Game(Controller):
 
                 # Attack Entity or Move
                 if target:
-                    attack_results = self.player.fighter.attack(target)
-                    self.player_turn_results.extend(attack_results)
+
+                    # Check if Entity Faction
+                    if self.player.faction.check_enemy(target.faction.faction_name):
+                        # Enemy
+                        attack_results = self.player.fighter.attack(target)
+                        self.player_turn_results.extend(attack_results)
+                    elif self.player.faction.check_ally(target.faction.faction_name):
+                        # Ally
+                        self.player_turn_results.extend([{'message': Message('You bump into a friendly %s.' %
+                                                                             target.name)}])
+                    else:
+                        # Neutral
+                        self.player_turn_results.extend([{'message': Message('You bump into a %s.' % target.name)}])
+
                 else:
                     self.game_map.transparent[self.player.y][self.player.x] = True  # unblock previous position
                     self.game_map.transparent[self.player.y + dy][self.player.x + dx] = False  # block new position
@@ -223,6 +235,7 @@ class Game(Controller):
                     interact_results = self.player.fighter.interact(map_object_entity,
                                                                     target_inventory=self.player.inventory)
                     self.player_turn_results.extend(interact_results)
+
 
                 self.game_state = GameStates.ENEMY_TURN
 
@@ -424,14 +437,15 @@ class Game(Controller):
             message, self.game_state = kill_player(dead_entity)
         else:
             message = kill_monster(dead_entity)
-            self.display_message(message)
+        self.display_message(message)
             # self.message_log.add_message(message)
 
-    def open_chest(self, chest):
-        if chest.inventory.empty:
-            # Change from Close Chest to Open Chest
-            self.game_map.tileset_tiles[chest.y][chest.x] = 9
-            chest.change_map_object(self.game_map.tile_set.get("9"), 9)
+    def chest_interact(self, chest):
+        if chest:
+            if chest.inventory.empty:
+                # Change from Close Chest to Open Chest
+                self.game_map.tileset_tiles[chest.y][chest.x] = 9
+                chest.change_map_object(self.game_map.tile_set.get("9"), 9)
         self.game_state = GameStates.ENEMY_TURN
 
     def toggle_god_mode(self):
@@ -663,9 +677,6 @@ class Game(Controller):
         # Analyze Actions User Results and Propagate Resulting Events
         for player_turn_result_dict in self.player_turn_results:
             for result_key, result_val in player_turn_result_dict.items():
-                # print('player_turn_result:', player_turn_result)
-                # result_key = next(iter(player_turn_result))
-                # result_val = player_turn_result[result_key]
                 result_event = PLAYER_TURN_RESULTS.get(result_key, no_key_action)
                 result_event(self, result_val)  # pass dict.values()
 
@@ -676,9 +687,34 @@ class Game(Controller):
             self.fov_recompute = True
             for entity in self.entities:
                 if entity.ai:
-                    enemy_turn_results = entity.ai.take_turn(self.player, self.enemy_fov_map, self.game_map,
-                                                             self.entities,
-                                                             CONSTANTS['enemy_fov_radius'])
+
+                    # Pick Closest Enemy Entity and Attack
+                    # Note: This doesn't take into account, if obstacles block FOV to see entity as all entities are
+                    #       sharing the same FOV map.
+
+                    # Check if Current Target is Dead
+                    if entity.ai.current_target:
+                        if not entity.ai.current_target.fighter:
+                            entity.ai.current_target = None
+
+                    if not entity.ai.current_target:
+                        close_entities = {}
+                        for other_entity in self.entities:
+                            if other_entity.ai or other_entity is self.player:  # Check if AI
+
+                                distance = entity.distance_to(other_entity.x, other_entity.y)
+                                if distance < entity.fighter.fov:  # Check within FOV distance
+                                    if entity.faction.check_enemy(other_entity.faction.faction_name):
+
+                                        close_entities[distance] = other_entity
+
+                        if close_entities:
+                            entity.ai.current_target = close_entities[min(close_entities.keys())]
+                        else:
+                            entity.ai.path = []
+                            entity.ai.current_target = None
+
+                    enemy_turn_results = entity.ai.take_turn(self.enemy_fov_map, self.game_map, self.entities)
 
                     for enemy_turn_result in enemy_turn_results:
                         message = enemy_turn_result.get('message')
@@ -687,12 +723,15 @@ class Game(Controller):
                         if message:
                             self.message_log.add_message(message)
 
-                        # Check if Player Dead or Monster Dead
+                        # Check if Target Dead or Monster Dead
                         if dead_entity:
                             if dead_entity == self.player:
                                 message, self.game_state = kill_player(dead_entity)
                             else:
+                                print('%s has perished!' % dead_entity.name)
                                 message = kill_monster(dead_entity)
+                                self.game_map.walkable[dead_entity.y][dead_entity.x] = True
+                                self.game_map.transparent[dead_entity.y][dead_entity.x] = True
 
                             self.message_log.add_message(message)
 
@@ -709,16 +748,13 @@ class Game(Controller):
             # Update FOV for Player
             recompute_fov(self.fov_map, self.player.x, self.player.y, self.player.fighter.fov, self.game_map.entrances,
                           CONSTANTS['fov_light_walls'], CONSTANTS['fov_algorithm'])
-            # Update FOV for Entities
-            # Note: Doesn't do as expected, fov_map gets overwritten multiple times per entity.
-            # TODO: Combine fov calculations for all entities, that it only happens once.
+            
+            # Update and Combine FOV for Entities
             self.enemy_fov_map = definite_enemy_fov(self.game_map, self.fov_map, self.game_map.entrances, self.entities,
                                                CONSTANTS['fov_light_walls'],
                                                CONSTANTS['fov_algorithm'])
 
         # Actual Drawing
-        # self.panel.draw_frame(0, 0, CONSTANTS['screen_width'], CONSTANTS['panel_height'],
-        #                               clear=False, bg_blend=tcod.BKGND_NONE)
         clear_console(self.event_panel)
         view_x_start, view_x_end, view_y_start, view_y_end = obtain_viewport_dimensions(self.game_map,
                                                                                         CONSTANTS['viewport_width'],
@@ -789,16 +825,16 @@ class Game(Controller):
             frame_y = self.normal_mouse_pos[1]
             if self.normal_mouse_pos[1] > CONSTANTS.get('viewport_height'):
                 frame_y = self.normal_mouse_pos[1] + 1 - line_count
-            popup_panel = tcod.console.Console(info_pane_width, line_count)
+            popup_panel = tcod.console.Console(info_pane_width, line_count+1)
 
-            popup_panel.draw_frame(x=0, y=0, width=info_pane_width, height=line_count, title='???', fg=tcod.light_gray,
+            popup_panel.draw_frame(x=0, y=0, width=info_pane_width, height=line_count+1, title='', fg=tcod.light_gray,
                                    bg=tcod.black, clear=True, bg_blend=tcod.BKGND_SCREEN)
 
             popup_panel.print_box(x=1, y=1, width=info_pane_width - 2,
-                                       height=line_count, string=info[2:])
+                                       height=line_count+1, string=info[2:])
 
             popup_panel.blit(dest=self.event_panel, dest_x=frame_x, dest_y=frame_y, src_x=0, src_y=0,
-                                  width=info_pane_width, height=line_count)
+                                  width=info_pane_width, height=line_count+1)
 
         # # Mouse Over Display
         # mouse_info = get_info_under_mouse(self.mouse_pos, self.game_map, self.entities, self.game_map.map_objects,
@@ -863,16 +899,14 @@ class Game(Controller):
         # Terrain Under Mouse Display
         if self.mouse_pos:
             mouse_x, mouse_y = self.mouse_pos
-
-            if self.fov_map.fov[mouse_y][mouse_x]:
-
-                tile = self.game_map.tileset_tiles[mouse_y][mouse_x]
-                _tile = self.game_map.tile_set.get("%s" % tile)
-                name = "(%s, %s): %s" % (mouse_x, mouse_y, _tile.get("name"))
-            else:
-                name = "(%s, %s)" % (mouse_x, mouse_y)
-            self.side_panel.print(1, CONSTANTS['side_panel_height'] - 2, name,
-                                  fg=tcod.light_gray, bg_blend=tcod.BKGND_NONE, alignment=tcod.LEFT)
+            tile = self.game_map.tileset_tiles[mouse_y][mouse_x]
+            _tile = self.game_map.tile_set.get("%s" % tile)
+            name = "%s\nCost: %s\n(%s, %s)" % (_tile.get("name"), self.game_map.tile_cost[mouse_y][mouse_x],
+                                                   mouse_x, mouse_y)
+            # else:
+            #     name = "(%s, %s)" % (mouse_x, mouse_y)
+            self.side_panel.print(1, CONSTANTS['side_panel_height'] - 4, string=name, fg=tcod.light_gray,
+                                  bg_blend=tcod.BKGND_NONE, alignment=tcod.LEFT)
 
         self.side_panel.blit(dest=ROOT_CONSOLE, dest_x=CONSTANTS['viewport_width'] * 2, dest_y=0, src_x=0, src_y=0,
                              width=CONSTANTS['side_panel_width'], height=CONSTANTS['side_panel_height'], )
@@ -1041,7 +1075,7 @@ PLAYER_TURN_RESULTS = {
     'map': Game.activate_map,
     'targeting_cancelled': Game.deactivate_targeting_mode,
     'xp': Game.obtain_xp,
-    'chest': Game.open_chest,
+    'chest': Game.chest_interact,
     'dead': Game.dead_entity
 }
 

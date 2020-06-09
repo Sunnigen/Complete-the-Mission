@@ -1,3 +1,4 @@
+import numpy as np
 from random import choice
 
 import tcod as libtcod
@@ -29,9 +30,18 @@ LEVEL_GENERATION = [RandomWalkAlgorithm, TunnelingAlgorithm]
 
 
 class GameMap(Map):
-    explored = [[]]
-    tileset_tiles = [[]]
-    char_tiles = [[]]
+    explored = [[]]  # boolean 2d numpy array of what player has explored
+    tileset_tiles = [[]]  # 2d numpy array of indexes from tile_set.json
+    map_objects = []  # list of map object entities that can be interacted with  does not need to be iterated through every frame
+    # char_tiles = [[]]  # 2d numpy array of just the glyphs need to see if this is still needed
+    level = ''  # name of level generation algorithm
+    map = None
+    player = None
+    tile_cost = [[]]  # 2d numpy array of integers of "traversal costs" of each node
+
+    entrances = []
+    encounters = []  # Used to keep track of entities in the same group, centered on a room
+    rooms = {}
 
     def __init__(self, width, height, dungeon_level=1):
         super(GameMap, self).__init__(width, height)
@@ -40,20 +50,14 @@ class GameMap(Map):
         self.spawn_chances = {'mobs': {},
                               'items': {}}  # Used to display dungeon level stats
         self.tile_set = obtain_tile_set()
-        self.rooms = {}
-        self.encounters = []  # Used to keep track of entities in the same group, centered on a room
-        self.entrances = []
-        self.player = None
-        self.map_objects = []
-        self.level = ''
-        self.map = None
 
     def initialize_open_map(self):
         # Set Entire Map to Open Floor
-        self.explored = [[False for y in range(self.width)] for x in range(self.height)]
-        blank_tile = self.tile_set['2'].get('char')
-        self.char_tiles = [[blank_tile for y in range(self.width)] for x in range(self.height)]
-        self.tileset_tiles = [[2 for y in range(self.width)] for x in range(self.height)]
+        self.explored = [[False for x in range(self.width)] for y in range(self.height)]
+        self.tile_cost = [[1 for x in range(self.width)] for y in range(self.height)]
+        # blank_tile = self.tile_set['2'].get('char')
+        # self.char_tiles = [[blank_tile for y in range(self.width)] for x in range(self.height)]
+        self.tileset_tiles = [[2 for x in range(self.width)] for y in range(self.height)]
 
         for x in range(self.height):
             for y in range(self.width):
@@ -64,8 +68,9 @@ class GameMap(Map):
     def initialize_closed_map(self):
         # Set Entire Map to Closed Walls
         self.explored = [[False for y in range(self.width)] for x in range(self.height)]
-        blank_tile = self.tile_set['1'].get('char')
-        self.char_tiles = [[blank_tile for y in range(self.width)] for x in range(self.height)]
+        self.tile_cost = [[0 for x in range(self.width)] for y in range(self.height)]
+        # blank_tile = self.tile_set['1'].get('char')
+        # self.char_tiles = [[blank_tile for y in range(self.width)] for x in range(self.height)]
         self.tileset_tiles = [[1 for y in range(self.width)] for x in range(self.height)]
 
         for x in range(self.height):
@@ -109,59 +114,8 @@ class GameMap(Map):
 
         print('\n\nGeneration Type for Dungeon Level %s: %s' % (self.dungeon_level, self.map.__class__))
         self.map.generate_level(self, self.dungeon_level, max_rooms, room_min_size, room_max_size, map_width,
-                                 map_height, player, entities, item_table, mob_table, furniture_table)
-        # TODO: Make furniture entities a part of the map that updates once.
-        # Place Furniture Entities
-        # for f in self.map_objects:
-        #     print('char:', f.char, f.name, f.json_index)
-        #     place_tile(self, f.x, f.y, f.json_index)
-
-            # self.tiles[f.y][f.x] = f.char
-            # if not f.furniture.walkable:
-            #     self.walkable[f.y][f.x] = False
-
-
-
-
-        # for row in self.tileset_tiles:
-        #     print(row)
-        # for row in self.char_tiles:
-        #     print(row)
-
-        # Generation Stats
-        # mob_count = {}
-        # item_count = {}
-        # furniture_count = {}
-        # for e in entities:
-        #     if e.ai:
-        #         if e.name in mob_count:
-        #             mob_count[e.name] += 1
-        #         else:
-        #             mob_count[e.name] = 1
-        #     elif e.item or e.equippable:
-        #         if e.name in item_count:
-        #             item_count[e.name] += 1
-        #         else:
-        #             item_count[e.name] = 0
-        #     elif e.map_object:
-        #         if e.name in furniture_count:
-        #             furniture_count[e.name] += 1
-        #         else:
-        #             furniture_count[e.name] = 0
-        #
-        # print('\nMob List:')
-        # for mob, count in mob_count.items():
-        #     print('\t%s: %s' % (mob, count))
-        # print('\nItem List:')
-        # for item, count in item_count.items():
-        #     print('\t%s: %s' % (item, count))
-        # print('\nFurniture List:')
-        # for furniture, count in furniture_count.items():
-        #     print('\t%s: %s' % (furniture, count))
-
-
-        # for room in self.rooms:1
-        # self.transparent[player.y][player.x] = False  # block new position
+                                map_height, player, entities, item_table, mob_table, furniture_table
+                                )
 
         # Show Floor Layout
         # for row in self.tiles:

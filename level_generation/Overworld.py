@@ -8,9 +8,6 @@ from scipy.spatial import ConvexHull, Delaunay
 
 import matplotlib.pyplot as plt
 
-
-from kivy.clock import Clock
-
 import tcod
 import tcod.noise
 import tcod.path

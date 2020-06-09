@@ -1,15 +1,16 @@
 from math import sqrt
 from random import choice, choices, randint
 
-import tcod as libtcod
 
-from components.AI import BasicMob, PatrolMob
+from components.AI import Mob, PatrolMob
 from components.Encounter import Encounter
 from components.Equippable import Equippable
+from components.Faction import Faction
 from components.Fighter import Fighter
 from components.Furniture import Furniture
 from components.Inventory import Inventory
 from components.Item import Item
+from level_generation.Prefab import Prefab
 from components.Stairs import Stairs
 from Entity import Entity
 from GameMessages import Message
@@ -23,6 +24,7 @@ from RenderFunctions import RenderOrder
 
 
 TILE_SET = obtain_tile_set()
+ITEMS = obtain_item_table()
 
 
 def calculate_distance(x1, y1, x2, y2):
@@ -117,8 +119,9 @@ def place_tile(game_map, x, y, obj):
     game_map.transparent[y][x] = tile.get('transparent')
     game_map.fov[y][x] = tile.get('fov')
     game_map.walkable[y][x] = tile.get('walkable')
-    game_map.char_tiles[y][x] = tile.get('char')
+    # game_map.char_tiles[y][x] = tile.get('char')
     game_map.tileset_tiles[y][x] = int(obj)
+    game_map.tile_cost[y][x] = tile.get('tile_cost')
 
 
 def find_wall_direction(room_from, room_to):
@@ -195,8 +198,8 @@ def place_entities(game_map, dungeon_level, room, entities, item_table, mob_tabl
     game_map.spawn_chances = {'mobs': monster_chances, 'items': item_chances}
 
     # Initiate Encounter
-    pop = [BasicMob, PatrolMob]
-    # pop = [BasicMob]
+    pop = [Mob, PatrolMob]
+    # pop = [Mob]
     # pop = [PatrolMob]
     # weights = [100]
     weights = [50, 50]
@@ -259,26 +262,139 @@ def generate_mobs(entities, game_map, number_of_mobs, monster_chances, mob_table
     return monster_list
 
 
-def generate_mob(x, y, mob_stats, mob_index, encounter_group, pop=BasicMob):
-    pop = [pop]
-    weights = [100]
-    # weights = [50, 50]
-    encounter_type = choices(population=pop,
-                             weights=weights,
-                             k=1)[0]
+def generate_mob(x, y, mob_stats, mob_index, encounter_group, faction, ai):
+
+    faction_component = Faction(faction_name=faction)
 
     fighter_component = Fighter(hp=mob_stats.get('hp'), defense=mob_stats.get('def'),
                                 power=mob_stats.get('att'), xp=mob_stats.get('xp'), fov=mob_stats.get('fov'),
                                 mob_level=mob_stats.get('mob_level'))
-    ai_component = encounter_type(encounter=encounter_group, origin_x=x, origin_y=y)
+    ai_component = ai(encounter=encounter_group, origin_x=x, origin_y=y)
     mob_entity = Entity(x, y, mob_stats.get('char'), mob_stats.get('color'), mob_stats.get('name'), mob_index,
                         blocks=True, fighter=fighter_component, render_order=RenderOrder.ACTOR,
-                        ai=ai_component)
+                        ai=ai_component, faction=faction_component)
+
     if isinstance(ai_component, PatrolMob):
         mob_entity.ai.goal_x = x
         mob_entity.ai.goal_y = y
 
     return mob_entity
+
+
+def generate_chest(x, y, entities, map_objects, game_map):
+    if not any([entity for entity in entities + map_objects if entity.x == x and entity.y == y]) and \
+            game_map.is_within_map(x, y) and not game_map.is_blocked(x, y):
+
+        # Select Chest
+        object_index = "10"  # this points to closed chest
+        object_stats = TILE_SET[object_index]
+
+        # Inventory/Items Contained Within
+        inventory_component = Inventory(3)
+        inventory_component.items = generate_random_items()
+
+        # TODO: Directly Add to Game Map, might have to change
+        for item in inventory_component.items:
+            entities.append(item)
+
+        # Interactable
+        movable = object_stats.get('moveable')
+        breakable = object_stats.get('breakable')
+        walkable = object_stats.get('walkable')
+        furniture_component = Furniture(name=object_stats.get('name'), movable=movable,
+                                        breakable=breakable, walkable=walkable,
+                                        interact_function=eval(object_stats.get('interact_function')))
+        chest = Entity(x, y, object_stats.get('char'), object_stats.get('color'), object_stats.get('name'),
+                               object_index, render_order=RenderOrder.ITEM, furniture=furniture_component,
+                               inventory=inventory_component)
+
+        # TODO: Directly Add to Game Map, might have to change
+        game_map.map_objects.append(chest)
+
+
+def generate_object(x, y, entities, map_objects, game_map, object_stats, object_index, item_list=None):
+    # Create an Object that has an "Interact" function
+
+    if not any([entity for entity in entities + map_objects if entity.x == x and entity.y == y]) and \
+            game_map.is_within_map(x, y) and not game_map.is_blocked(x, y):
+
+        inventory = object_stats.get('inventory')
+        inventory_component = None
+
+        # Create Inventory
+        # TODO: Check if Item Entities have been moved to their own list in Engine.py(not yet)
+        if inventory:
+            inventory_component = Inventory(object_stats.get('inventory_capacity'))
+            number_of_items = object_stats.get('inventory_capacity')
+            # number_of_items = choice([0, 0, 0, 1, 2, 3])
+            inventory_component.items = _generate_random_items(item_list, number_of_items, game_map.dungeon_level)
+            for item in inventory_component.items:
+                entities.append(item)
+
+        movable = object_stats.get('moveable')
+        breakable = object_stats.get('breakable')
+        walkable = object_stats.get('walkable')
+        # items=[], movable=False, breakable=False, walkable=False, interact_function
+        map_object_component = Furniture(name=object_stats.get('name'), movable=movable, breakable=breakable,
+                                         walkable=walkable, interact_function=eval(object_stats.get('interact_function')))
+
+        map_object_entity = Entity(x, y, object_stats.get('char'), object_stats.get('color'), object_stats.get('name'),
+                                   object_index, render_order=RenderOrder.ITEM, furniture=map_object_component,
+                                   inventory=inventory_component
+                                   )
+        # TODO: Directly Add to Game Map, might have to change
+        game_map.map_objects.append(map_object_entity)
+        place_tile(game_map, x, y, object_index)
+
+
+def _generate_random_items(item_list, number_of_items, dungeon_level):
+    # Create Item Entities
+    item_entities = []
+    item_chances = {item: spawn_chance([[item_stats.get('spawn_chance'), item_stats.get('item_level')]],
+                                       dungeon_level) for item, item_stats in ITEMS.items()
+                    }
+
+    x, y = 0, 0
+
+    # Generate Random Number of Items
+    for i in range(number_of_items):
+        # Randomly Select an Item to Spawn
+        item_index = random_choice_from_dict(item_chances)
+        item_stats = ITEMS[item_index]
+
+        if item_stats.get('type') == 'consumable':
+            item_component = Item(use_function=eval(item_stats.get('use_function')),
+                                  amount=item_stats.get('amount'),
+                                  radius=item_stats.get('radius'),
+                                  damage=item_stats.get('damage'),
+                                  targeting_message=Message(item_stats.get('targeting_message')),
+                                  targeting=item_stats.get('targeting'),
+                                  maximum_range=item_stats.get('range'),
+                                  description=item_stats.get('description')
+                                  )
+
+            item_entity = Entity(x, y, item_stats.get('char'), item_stats.get('color'), item_stats.get('name'),
+                                 item_index, render_order=RenderOrder.ITEM, item=item_component)
+
+        elif item_stats.get('type') == 'reuseable':
+            item_component = Item(use_function=eval(item_stats.get('use_function')), name=item_stats.get('name'),
+                                  text=item_stats.get('text'), description=item_stats.get('description'))
+
+            item_entity = Entity(x, y, item_stats.get('char'), item_stats.get('color'), item_stats.get('name'),
+                                 item_index, render_order=RenderOrder.ITEM, item=item_component,
+                                 )
+
+        elif item_stats.get('type') == 'equip':
+            equippable_component = Equippable(item_stats.get('slot'), power_bonus=item_stats.get('attack'),
+                                              defense_bonus=item_stats.get('defense'),
+                                              description=item_stats.get('description'))
+
+            item_entity = Entity(x, y, item_stats.get('char'), item_stats.get('color'), item_stats.get('name'),
+                                 item_index, equippable=equippable_component)
+        item_entities.append(item_entity)
+
+
+    return item_entities
 
 
 def generate_objects(entities, map_objects, game_map, room, number_of_objects, object_chances, object_table):
@@ -315,6 +431,7 @@ def generate_objects(entities, map_objects, game_map, room, number_of_objects, o
             object_entity = Entity(x, y, object_stats.get('char'), object_stats.get('color'), object_stats.get('name'),
                                    object_index, render_order=RenderOrder.ITEM, furniture=furniture_component,
                                    inventory=inventory_component)
+
             map_objects.append(object_entity)
             object_list.append(object_entity)
 
@@ -409,3 +526,18 @@ def generate_items(entities, game_map, room, number_of_items, item_chances, item
 def place_stairs(dungeon_level, x, y):
     return Entity(x, y, '>', (255, 191, 0), 'Stairs', "11", render_order=RenderOrder.STAIRS,
                   stairs=Stairs(dungeon_level + 1), fov_color=(128, 112, 64))
+
+
+def place_prefab(game_map, prefab, entities):
+
+    i = 0
+    for x in range(prefab.x, prefab.x + prefab.width):
+        for y in range(prefab.y, prefab.y + prefab.height):
+
+            map_object = prefab.template[i]
+            object_stats = TILE_SET.get(str(map_object))
+            if object_stats.get('interact_function'):
+                generate_object(x, y, entities, game_map.map_objects, game_map, object_stats, map_object)
+            else:
+                place_tile(game_map, x, y, map_object)
+            i += 1

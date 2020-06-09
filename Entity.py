@@ -4,6 +4,7 @@ import tcod as libtcod
 from tcod.path import AStar
 
 from components.AI import get_direction
+from components.Faction import Faction
 from components.Item import Item
 from ItemFunctions import *
 from RenderFunctions import RenderOrder
@@ -15,7 +16,7 @@ class Entity:
     """
     def __init__(self, x, y, char, color, name, json_index, blocks=False, render_order=RenderOrder.CORPSE, fighter=None,
                  ai=None, item=None, inventory=None, stairs=None, level=None, equipment=None, equippable=None,
-                 fov_color=None, furniture=None):
+                 fov_color=None, furniture=None, faction=None):
         self.x = x
         self.y = y
         self.char = char
@@ -34,6 +35,10 @@ class Entity:
         self.equippable = equippable
         self.fov_color = fov_color  # color if entity if NOT within FOV, but explored
         self.map_object = furniture
+        self.faction = faction
+
+        if self.faction:
+            self.faction.owner = self
 
         if self.fighter:
             self.fighter.owner = self
@@ -70,7 +75,7 @@ class Entity:
             self.map_object.owner = self
 
     def change_map_object(self, tile_data, json_index):
-        print('change_map_object')
+        # print('change_map_object')
         if self.map_object:
             self.char = tile_data.get("char")
             self.name = tile_data.get("name")
@@ -101,35 +106,12 @@ class Entity:
             self.move(dx, dy)
 
     def move_astar(self, target_x, target_y, entities, game_map, fov_map):
-        # Obtain Random Point within Room
-        # TODO: Store astar path and update if only map/situation changes
-        # print('\n\nmove_astar')
 
+        # TODO: Store astar path and update if only map/situation changes
+        # astar = AStar(game_map.transparent.astype(int), 1.41)
         astar = AStar(game_map.walkable.astype(int), 1.41)
         astar_path = astar.get_path(self.y, self.x, target_y, target_x)
-
-        if astar_path:
-            # print('path found')
-            y, x = astar_path.pop(0)
-
-            # Check if Entity in the way
-            if not game_map.transparent[y][x]:
-                # print('path found but an entity blocks the way')
-                self.ai.stuck_time += 1
-                return
-            self.ai.direction_vector = get_direction(self.x, self.y, x, y)
-            game_map.transparent[self.y][self.x] = True  # unblock previous position
-            game_map.transparent[y][x] = False  # block new position# Update Position
-            self.x = x
-            self.y = y
-            return astar_path
-
-        # else:
-        #     print('NO PATH FOUND!')
-        #     print(self.y, self.x, target.y, target.x)
-            # for row in game_map.walkable.astype(int):
-            #     print(row)
-        #     print('astar:\n', astar.get_path(self.y, self.x, target.y, target.x))
+        return astar_path
 
     def distance(self, x, y):
         return math.sqrt((x - self.x) ** 2 + (y - self.y) ** 2)
