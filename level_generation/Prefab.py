@@ -1,8 +1,4 @@
 # General Class to load and place prefabs
-
-from level_generation.GenerationUtils import place_tile
-
-
 class Prefab:
     width = 0
     height = 0
@@ -23,11 +19,3 @@ class Prefab:
     def set_position(self, x, y):
         self.x = x
         self.y = y
-
-
-def place_prefab(game_map, prefab):
-    if isinstance(prefab, Prefab):
-        i = 0
-        for x in range(prefab.x, prefab.x + prefab.width):
-            for y in range(prefab.y, prefab.y + prefab.height):
-                place_tile(game_map, x, y, prefab.template[i])

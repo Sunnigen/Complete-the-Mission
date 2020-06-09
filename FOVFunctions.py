@@ -38,6 +38,9 @@ def definite_enemy_fov(game_map, fov_map, entrances, entities, light_walls=True,
     _new_enemy_fov_map = np.zeros(fov_map.transparent.shape, dtype=bool)
     _entrances = entrances.copy()
 
+    # TODO: Does it matter if AI cannot "see" the "wall"?
+    # light_walls = False
+
     # Cycle Through all Enemies and Combine FOV Map
     for e in entities:
         if e.ai:

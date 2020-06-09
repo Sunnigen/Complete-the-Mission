@@ -1,5 +1,6 @@
 import tcod as libtcod
 
+from components.Faction import Faction
 from components.Fighter import Fighter
 from components.Level import Level
 from components.Item import Item
@@ -86,14 +87,14 @@ def get_constants():
 
 def get_game_variables(constants, level=None):
     # Player Variables
-    print('get_game_variables')
     fighter_component = Fighter(hp=100, defense=1, power=2, fov=constants.get('fov_radius'))
-    inventory_component = Inventory(26)
+    inventory_component = Inventory(100)
     level_component = Level()
     equipment_component = Equipment()
+    faction_component = Faction(faction_name='Player')
     player = Entity(0, 0, '@', (191, 171, 143), 'Player', "player", blocks=True, render_order=RenderOrder.ACTOR,
                     fighter=fighter_component, inventory=inventory_component, level=level_component,
-                    equipment=equipment_component)
+                    equipment=equipment_component, faction=faction_component)
     entities = [player]
     encounters = []
 

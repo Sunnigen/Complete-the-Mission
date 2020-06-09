@@ -2,18 +2,30 @@
         "name": "Prison Bed",
         "width": 1,
         "height": 2,
-        "template": ["20", "20"]
+        "template": [20, 20]
         },
   "toilet": {
           "name": "Toilet",
           "width": 1,
           "height": 1,
-          "template": ["21"]
+          "template": [21]
         },
   "chest": {
           "name": "Chest",
           "width": 1,
           "height": 1,
-          "template": ["10"]
+          "template": [10]
+  },
+  "guard_bed": {
+    "name": "Guard Bed",
+    "width": 1,
+    "height": 3,
+    "template": [23, 22, 22]
+  },
+  "alarm_room": {
+    "name": "Alarm",
+    "width": 3,
+    "height": 3,
+    "template": [1, 26, 1, 25, 24, 25, 1, 26, 1]
   }
 }

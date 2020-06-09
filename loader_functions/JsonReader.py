@@ -54,3 +54,17 @@ def obtain_prefabs(key_word=''):
 
     # print('prefab_table:', prefab_table)
     return prefab_table
+
+
+def obtain_factions(key_word=''):
+    faction_file = "%s\\assets\\faction.json" % os.getcwd()
+
+    if not os.path.isfile(faction_file):
+        print('Cannot locate %s!!!' % faction_file)
+        raise FileNotFoundError
+
+    with open(faction_file , "r") as read_file:
+        faction_file  = json.load(read_file)
+
+    # print('prefab_table:', prefab_table)
+    return faction_file

@@ -76,5 +76,68 @@
     "spawn_chance": [[0, 1]],
     "mob_level": 99,
     "fov": 10
+  },
+  "rebel_fighter": {
+    "name": "Rebel Fighter",
+    "char": 114,
+    "glyph": "r",
+    "color": [191, 191, 0],
+    "hp": 20,
+    "def": 0,
+    "att": 3,
+    "xp": 25,
+    "spawn_chance": [[80, 1]],
+    "mob_level": 1,
+    "fov": 8
+  },
+  "rebel_squad_leader": {
+    "name": "Rebel Squad Leader",
+    "char": 82,
+    "glyph": "R",
+    "color": [255, 255, 0],
+    "hp": 30,
+    "def": 2,
+    "att": 4,
+    "xp": 350,
+    "spawn_chance": [[80, 1]],
+    "mob_level": 5,
+    "fov": 10
+  },
+  "imperial_warrior": {
+    "name": "Imperial Warrior",
+    "char": 119,
+    "glyph": "w",
+    "color": [191, 0, 0],
+    "hp": 20,
+    "def": 1,
+    "att": 3,
+    "xp": 50,
+    "spawn_chance": [[80, 1]],
+    "fov": 8
+  },
+  "imperial_knight": {
+    "name": "Imperial Knight",
+    "char": 107,
+    "glyph": "k",
+    "color": [191, 0, 0],
+    "hp": 25,
+    "def": 2,
+    "att": 3,
+    "xp": 100,
+    "spawn_chance": [[80, 1]],
+    "fov": 8
+  },
+  "imperial_captain": {
+    "name": "Imperial Captain",
+    "char": 107,
+    "glyph": "K",
+    "color": [255, 0, 0],
+    "hp": 30,
+    "def": 4,
+    "att": 4,
+    "xp": 500,
+    "spawn_chance": [[80, 1]],
+    "mob_level": 5,
+    "fov": 10
   }
 }

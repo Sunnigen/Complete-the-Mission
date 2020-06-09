@@ -4,14 +4,14 @@ from random import choice, choices, randint, shuffle
 import numpy as np
 import tcod
 
-from components.AI import PatrolMob
+from components.AI import DefensiveMob, Mob, PatrolMob
 from components.Encounter import Encounter
 
 from level_generation.BSP import BinarySpacePartition
-from level_generation.GenerationUtils import place_stairs, create_floor, create_wall, place_tile
-from level_generation.GenerationUtils import generate_mob
+from level_generation.GenerationUtils import place_stairs, create_floor, create_wall, place_tile, generate_chest
+from level_generation.GenerationUtils import generate_mob, generate_object, place_prefab
 from loader_functions.JsonReader import obtain_tile_set, obtain_prefabs, obtain_mob_table
-from level_generation.Prefab import Prefab, place_prefab
+from level_generation.Prefab import Prefab
 
 TILE_SET = obtain_tile_set()
 PREFABS = obtain_prefabs()
@@ -40,7 +40,7 @@ class UndergravePrison(BinarySpacePartition):
         self.generate()
 
         # Terrain and Doodads
-        self.assign_terrain()
+        self.assign_terrain(entities)
 
         # Placement of Player and Stairs
         self.place_player_stairs(entities)
@@ -55,25 +55,26 @@ class UndergravePrison(BinarySpacePartition):
         game_map.rooms = self.rooms
         game_map.sub_rooms = self.sub_rooms
 
-    def assign_terrain(self):
-        # Place Terrain and Doodads
+    def assign_terrain(self, entities):
+        # Place Floor
         self.game_map.initialize_closed_map()
         for y in range(self.height):
             for x in range(self.width):
                 if self.grid[x][y] == 0:
                     create_floor(self.game_map, x, y)
+                    self.game_map.tile_cost[y][x] = 1
 
-        # print(len(self.grid[0]), len(self.grid))
+        # Place Floor Doodads
         for y in range(self.height):
             for x in range(self.width):
                 if self.game_map.tileset_tiles[y][x] == 2:
-                    terrain = randint(1, 50)
+                    terrain = randint(1, 100)
                     if terrain == 1:  # puddle
                         self.generate_puddles(x, y)
                     elif terrain == 2:  # vine
                         self.generate_vines(x, y)
 
-
+        # Generate Sub Rooms
         for room_list in self.rooms.values():
             for room in room_list:
 
@@ -213,13 +214,19 @@ class UndergravePrison(BinarySpacePartition):
                         modified_height = node.height + south_buffer - north_buffer
 
                         if modified_height < 3 or modified_width < 3:
-                            room_type = choice(['storage'])
+                            room_type = choice(['storage', 'empty', 'office'])
                         elif modified_height < 6 or modified_width < 6:
-                            room_type = choice(['storage', 'small_jail'])
+                            room_type = choice(['storage', 'jail', 'jail', 'alarm_room'])
                         elif modified_height < 10 or modified_width < 10:
-                            room_type = choice(['storage', 'small_jail', 'medium_jail'])
+                            room_type = choice(['storage', 'jail', 'jail', 'guard_dormitory'])
+                        elif modified_height < 20 or modified_width < 20:
+                            room_type = choice(['jail', 'jail', 'guard_dormitory'])
                         else:
-                            room_type = 'storage'
+                            room_type = choice(['jail', 'jail', 'guard_dormitory', 'storage', 'office'])
+
+
+
+                        # print('Room Type: %s, Size: (%s, %s)' % (room_type, modified_width, modified_height))
                         """
                                treasure_room', 'hard_monster_room', 'dead_prisoner_room
                                alarm_room', 'small_jail_cell', 'supply_room', 'food_storage_room', 'office_room
@@ -241,61 +248,109 @@ class UndergravePrison(BinarySpacePartition):
                                - Alarm Room
                                - Living Quarters
                         """
-
-
-
                         # Generate Room
-                        if room_type == 'small_jail' or room_type == 'medium_jail':
-                            # Place Jail Cells Along Outer Edge with Pillars at Each Corner
-                            for x in range(node.x + west_buffer, node.x + node.width + east_buffer + 1):
-                                for y in range(node.y + north_buffer, node.y + node.height + south_buffer + 1):
-                                    if x == node.x + west_buffer or \
-                                            x == node.x + node.width + east_buffer or \
-                                            y == node.y + north_buffer or \
-                                            y == node.y + node.height + south_buffer:
-
-                                        # Top Left Corner
-                                        if x == node.x + west_buffer and y == node.y + north_buffer:
-                                            create_wall(self.game_map, x, y)
-                                        # Bottom Left Corner
-                                        elif x == node.x + west_buffer and y == node.y + node.height + south_buffer:
-                                            create_wall(self.game_map, x, y)
-                                        # Bottom Right Corner
-                                        elif x == node.x + node.width + east_buffer and y == node.y + node.height + south_buffer:
-                                            create_wall(self.game_map, x, y)
-                                        # Top Right Corner
-                                        elif x == node.x + node.width + east_buffer and y == node.y + north_buffer:
-                                            create_wall(self.game_map, x, y)
-                                        elif self.grid[x][y] == 0:
-                                            place_tile(self.game_map, x, y, '14')
-
-                            # Cache Jail Location
-                            j = JailCell(node.x + west_buffer, node.y + north_buffer,  node.width + east_buffer - west_buffer, node.height + south_buffer - north_buffer, room)
-                            self.jail_cells.append(j)
-
-                            # Place Prefab for Jail Cell
-                            prefab_list = [PREFABS.get('toilet'), PREFABS.get('prison_bed'), PREFABS.get("chest")]
-                            shuffle(prefab_list)
-                            for prefab in prefab_list:
-                                p = Prefab()
-                                p.load_template(prefab)
-                                tries = 0
-                                max_tries = 20
-                                while tries < max_tries:
-                                    random_x = randint(j.x + 1, j.x + j.width - p.width)
-                                    random_y = randint(j.y + 1, j.y + j.height - p.height)
-
-                                    if self.grid[random_x][random_y] == 0 and self.game_map.tileset_tiles[random_y][random_x] == 2:
-                                        p.x, p.y = random_x, random_y
-                                        place_prefab(self.game_map, p)
-                                        tries = max_tries
-                                    tries += 1
-
+                        if room_type == 'jail':
+                            self.generate_jail_cell(node, room, entrances, north_buffer, south_buffer, east_buffer, west_buffer, entities)
                         elif room_type == 'storage':
-                            self.generate_storage_room(node, entrances, north_buffer, south_buffer, east_buffer, west_buffer)
-                        # elif room_type == 'prefab':
+                            self.generate_storage_room(node, entrances, north_buffer, south_buffer, east_buffer, west_buffer, entities)
+                        elif room_type == 'guard_dormitory':
+                            self.generate_guard_dormitory(node, entrances, north_buffer, south_buffer, east_buffer, west_buffer, entities)
+                        elif room_type == 'alarm_room':
+                            self.generate_alarm_room(node, entrances, north_buffer, south_buffer, east_buffer, west_buffer, entities)
 
-    def generate_storage_room(self, node, entrances, north_buffer, south_buffer, east_buffer, west_buffer):
+    def generate_jail_cell(self, node, room, entrances, north_buffer, south_buffer, east_buffer, west_buffer, entities):
+        # Place Jail Cells Along Outer Edge with Pillars at Each Corner
+        for x in range(node.x + west_buffer, node.x + node.width + east_buffer + 1):
+            for y in range(node.y + north_buffer, node.y + node.height + south_buffer + 1):
+                if x == node.x + west_buffer or \
+                        x == node.x + node.width + east_buffer or \
+                        y == node.y + north_buffer or \
+                        y == node.y + node.height + south_buffer:
+
+                    # Top Left Corner
+                    if x == node.x + west_buffer and y == node.y + north_buffer:
+                        create_wall(self.game_map, x, y)
+                    # Bottom Left Corner
+                    elif x == node.x + west_buffer and y == node.y + node.height + south_buffer:
+                        create_wall(self.game_map, x, y)
+                    # Bottom Right Corner
+                    elif x == node.x + node.width + east_buffer and y == node.y + node.height + south_buffer:
+                        create_wall(self.game_map, x, y)
+                    # Top Right Corner
+                    elif x == node.x + node.width + east_buffer and y == node.y + north_buffer:
+                        create_wall(self.game_map, x, y)
+                    elif self.grid[x][y] == 0:
+                        place_tile(self.game_map, x, y, '14')
+
+        # Cache Jail Location
+        j = JailCell(node.x + west_buffer, node.y + north_buffer, node.width + east_buffer - west_buffer,
+                     node.height + south_buffer - north_buffer, room)
+        self.jail_cells.append(j)
+
+
+
+        # Place Prefabs for Jail Cell
+        prefab_list = [PREFABS.get('toilet'), PREFABS.get('prison_bed'), PREFABS.get("chest")]
+        shuffle(prefab_list)
+        for prefab in prefab_list:
+            p = Prefab()
+            p.load_template(prefab)
+            tries = 0
+            max_tries = 20
+            while tries < max_tries:
+                random_x = randint(j.x + 1, j.x + j.width - p.width)
+                random_y = randint(j.y + 1, j.y + j.height - p.height)
+
+                if self.grid[random_x][random_y] == 0 and self.game_map.tileset_tiles[random_y][random_x] == 2:
+                    p.x, p.y = random_x, random_y
+                    place_prefab(self.game_map, p, entities)
+                    tries = max_tries
+                tries += 1
+
+        # Place Jail Cell Entrance;
+        if north_buffer != 0:
+            x = j.x + j.width // 2
+            y = j.y
+            place_tile(self.game_map, x, y, '15')
+        if west_buffer != 0:
+            x = j.x
+            y = j.y + j.height // 2
+            place_tile(self.game_map, x, y, '15')
+
+        if south_buffer != 0:
+            x = j.x + j.width // 2
+            y = j.y + j.height
+            place_tile(self.game_map, x, y, '15')
+        if east_buffer != 0:
+            x = j.x + j.width
+            y = j.y + j.height // 2
+            place_tile(self.game_map, x, y, '15')
+
+    def generate_alarm_room(self, node, entrances, north_buffer, south_buffer, east_buffer, west_buffer, entities):
+        p = Prefab()
+        prefab = PREFABS.get("alarm_room")
+        center_x, center_y = center(node)
+        p.load_template(prefab, x=center_x-1, y=center_y-1)
+        place_prefab(self.game_map, p, entities)
+
+    def generate_guard_dormitory(self, node, entrances, north_buffer, south_buffer, east_buffer, west_buffer, entities):
+        p = Prefab()
+        prefab = PREFABS.get("guard_bed")
+        p.load_template(prefab)
+        for x in range(node.x + west_buffer + 1, node.x + node.width + east_buffer):
+            for y in range(node.y + north_buffer + 1, node.y + node.height + south_buffer):
+                if x % 2 == 0 and y % 4 == 0 and p.height + y <= node.y + node.height:
+                    p.x, p.y = x, y
+                    place_prefab(self.game_map, p, entities)
+                if x % 2 == 1 and y % 4 == 0:
+                    if randint(0, 100) < 5:
+                        chest_index = "10"
+                        chest_stats = TILE_SET.get(chest_index)
+                        generate_object(x, y, entities, self.game_map.map_objects, self.game_map, chest_stats,
+                                        chest_index, item_list=None)
+                        # generate_chest(x, y, entities, self.game_map.map_objects, self.game_map)
+
+    def generate_storage_room(self, node, entrances, north_buffer, south_buffer, east_buffer, west_buffer, entities):
         crate_barrel_chance = ['18', '19']
         center_x, center_y = center(node)
         for x in range(node.x + west_buffer, node.x + node.width + east_buffer + 1):
@@ -321,8 +376,20 @@ class UndergravePrison(BinarySpacePartition):
 
                     dice_roll = randint(0, 100)
                     if dice_roll < chance:
-                        place_tile(self.game_map, x, y, choice(crate_barrel_chance))
-        # place_tile(self.game_map, center_x, center_y, '16')
+                        crate_barrel_index = choice(crate_barrel_chance)
+                        crate_barrel_stats = TILE_SET.get(crate_barrel_index)
+                        # place_tile(self.game_map, x, y, choice(crate_barrel_chance))
+                        # x, y, entities, map_objects, game_map, object_stats, object_index, item_list=None
+                        generate_object(x, y, entities, self.game_map.map_objects, self.game_map, crate_barrel_stats,
+                                        crate_barrel_index, item_list=None)
+
+                    else:
+                        dice_roll = randint(0, 100)
+                        if dice_roll < 5:
+                            chest_index = "10"
+                            chest_stats = TILE_SET.get(chest_index)
+                            generate_object(x, y, entities, self.game_map.map_objects, self.game_map, chest_stats, chest_index, item_list=None)
+                            # generate_chest(x, y, entities, self.game_map.map_objects, self.game_map)
 
     def generate_puddles(self, x, y):
         # Place Different Sized Puddles throughout Map
@@ -339,6 +406,8 @@ class UndergravePrison(BinarySpacePartition):
         # Place Prisoners
         max_tries = 30
         prisoner_index = 'weak_prisoner'
+        faction = "Prisoners of War"
+        ai_type = Mob
         prisoner_dict = MOBS.get(prisoner_index)
 
         for jail in self.jail_cells:
@@ -376,9 +445,9 @@ class UndergravePrison(BinarySpacePartition):
                     continue
 
                 # Spawn an Entity
-                entities_created.append(generate_mob(x, y, prisoner_dict, prisoner_index, encounter))
+                entities_created.append(generate_mob(x, y, prisoner_dict, prisoner_index, encounter, faction, ai_type))
 
-            # If Entities were Created Add Entities and and Increment Encounters
+            # If Entities were Created Add Entities and and Increment Encountersr
             if entities_created:
                 entities.extend(entities_created)
                 self.game_map.encounters.append(encounter)
@@ -387,10 +456,15 @@ class UndergravePrison(BinarySpacePartition):
         no_spawn_rooms = [self.start_room, self.end_room]
         _rooms = [room for cell_block in self.rooms.values() for room in cell_block if room not in no_spawn_rooms]
         guard_index = 'undergrave_guard'
+        faction = "Imperials"
         guard_dict = MOBS.get(guard_index)
 
         for room in _rooms:
-            spawn_check = randint(1, 3)
+            ai_type = PatrolMob
+            # ai_type = DefensiveMob
+            # ai_type = choice([DefensiveMob, PatrolMob])
+            spawn_check = 2
+            # spawn_check = randint(1, 3)
 
             if spawn_check == 2:
                 encounter = Encounter(room, len(self.game_map.encounters) + 1)
@@ -439,12 +513,14 @@ class UndergravePrison(BinarySpacePartition):
                         continue
 
                     # Spawn an Entity
-                    entities_created.append(generate_mob(x, y, guard_dict, guard_index, encounter, pop=PatrolMob))
+                    entities_created.append(generate_mob(x, y, guard_dict, guard_index, encounter, faction, ai_type))
 
                 # If Entities were Created Add Entities and and Increment Encounters
                 if entities_created:
                     entities.extend(entities_created)
                     self.game_map.encounters.append(encounter)
+
+            # break
 
         # room = self.start_room
         # encounter = Encounter(room, len(self.game_map.encounters) + 1)

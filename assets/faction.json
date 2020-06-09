@@ -1,0 +1,19 @@
+{
+  "Player": {
+    "ally": ["Player", "Rebels"],
+    "enemy": ["Imperials"]
+  },
+  "Imperials": {
+    "ally": ["Imperials"],
+    "enemy": ["Player","Rebels"]
+  },
+  "Prisoners of War": {
+    "ally": [],
+    "enemy": []
+  },
+  "Rebels": {
+    "ally": ["Player", "Rebels"],
+    "enemy": ["Imperials"]
+  }
+
+}
