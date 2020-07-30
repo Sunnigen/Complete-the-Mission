@@ -33,7 +33,7 @@ class BSPTreePolygonAlgorithm:
         return x_min, y_min, x_max, y_max
 
     def generate_level(self, game_map,max_rooms, room_min_size, room_max_size, map_width, map_height,
-                       entities, item_table, mob_table, map_x_start, map_y_start, vertices=[]):
+                       entities, particles, item_table, mob_table, map_x_start, map_y_start, vertices=[]):
         self.game_map = game_map
         # self.dungeon_level = dungeon_level
         self.room_min_size = room_min_size
@@ -67,7 +67,7 @@ class BSPTreePolygonAlgorithm:
         #     start_x, start_y = self.rooms[-1].center
 
         # Place Player
-        # player.x, player.y = start_x, start_y
+        # player.position.x, player.position.y = start_x, start_y
         # Place Stairs
         # entities.append(place_stairs(self.game_map.dungeon_level, last_x, last_y))
 

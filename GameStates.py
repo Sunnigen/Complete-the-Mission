@@ -12,3 +12,4 @@ class GameStates(Enum):
     LEVEL_UP = 7
     CHARACTER_SCREEN = 8
     READ = 9
+    DIALOGUE = 10

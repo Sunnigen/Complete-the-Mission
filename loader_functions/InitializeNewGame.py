@@ -7,13 +7,19 @@ from components.Item import Item
 from components.Inventory import Inventory
 from components.Equippable import Equippable
 from components.Equipment import Equipment
-from EquipmentSlots import EquipmentSlots
+from components.Position import Position
+from loader_functions.JsonReader import obtain_item_table
 from Entity import Entity
-from GameMessages import MessageLog
+from level_generation.GenerationUtils import create_item_entity
+from GameMessages import Message, MessageLog
+
 from GameStates import GameStates
 import ItemFunctions
 from map_objects.GameMap import GameMap
 from RenderFunctions import RenderOrder
+
+
+ITEMS = obtain_item_table()
 
 
 def get_constants():
@@ -24,9 +30,12 @@ def get_constants():
     screen_height = 40
 
     # Size of Map Render
-
     viewport_width = 16
     viewport_height = 16
+
+    # Map Size
+    map_width = 100
+    map_height = 100
 
     panel_height = 8
     panel_y = screen_height - panel_height
@@ -43,11 +52,8 @@ def get_constants():
     message_width = screen_width - 2
     message_height = panel_height - 2
 
-    map_width = 100
-    map_height = 80
-
     room_max_size = min(map_height // 5, map_width // 5)
-    room_min_size = min(map_height // 10, map_width // 10)
+    room_min_size = min(map_height // 7, map_width // 7)
     max_rooms = 50
 
     fov_algorithm = libtcod.FOV_BASIC
@@ -87,36 +93,38 @@ def get_constants():
 
 def get_game_variables(constants, level=None):
     # Player Variables
-    fighter_component = Fighter(hp=100, defense=1, power=2, fov=constants.get('fov_radius'))
-    inventory_component = Inventory(100)
+    fighter_component = Fighter(hp=100, defense=1, power=2, fov_range=constants.get('fov_radius'))
+    inventory_component = Inventory(26)
     level_component = Level()
     equipment_component = Equipment()
     faction_component = Faction(faction_name='Player')
-    player = Entity(0, 0, '@', (191, 171, 143), 'Player', "player", blocks=True, render_order=RenderOrder.ACTOR,
+    position_component = Position(0, 0)
+    player = Entity(64, (191, 171, 143), 'Player', "player", blocks=True, render_order=RenderOrder.ACTOR, position=position_component,
                     fighter=fighter_component, inventory=inventory_component, level=level_component,
                     equipment=equipment_component, faction=faction_component)
     entities = [player]
+    particles = []
+    particle_systems = []
     encounters = []
 
     # Generate Starting Equipment
-    equippable_component = Equippable("EquipmentSlots.MAIN_HAND", power_bonus=2)
-    dagger = Entity(0, 0, '-', libtcod.sky, 'Dagger', 'dagger', equippable=equippable_component)
-    player.inventory.add_item(dagger)
-    player.equipment.toggle_equip(dagger)
-
-    # item_entity = Entity(x, y, item_stats.get('char'), item_stats.get('color'), item_stats.get('name'),
-    #                      render_order=RenderOrder.ITEM, item=item_component)
-    item_component = Item(use_function=ItemFunctions.read, name='Dungeon Map', text='')
-    map = Entity(0, 0, "#", [255, 255, 255], "Dungeon Map", 'map', item=item_component)
-
-    player.inventory.add_item(map)
+    if not player.inventory.items:
+        # starting_equipment = ['map', 'imperial_longsword', 'imperial_chainmail_leggings', 'imperial_chainmail_coif',
+        #                       'imperial_chainmail_hauberk', 'imperial_battle_shield', 'teleport_crystal', 'blind_powder', 'confusion_scroll', 'lightning_scroll', 'fireball_scroll', 'poison_vial']
+        starting_equipment = ['map', 'dagger', 'fireball_scroll','fireball_scroll', 'lightning_scroll', 'lightning_scroll', 'lightning_scroll', 'lightning_scroll', 'master_key']
+        # starting_equipment = ['map', 'dagger', 'teleport_crystal','teleport_crystal', 'fireball_scroll', 'lightning_scroll', 'lightning_scroll', 'lightning_scroll', 'master_key']
+        for item_index in starting_equipment:
+            item_entity = create_item_entity(item_index)
+            player.inventory.add_item(item_entity)
+            if item_entity.equippable:
+                player.equipment.toggle_equip(item_entity)
 
     # Initiatize Map
     # TODO: Change game_map into a Map variable containing all the entities and tiles. All tiles are not transparent
     game_map = GameMap(constants['map_width'], constants['map_height'], dungeon_level=1)
     game_map.make_map(constants['max_rooms'], constants['room_min_size'], constants['room_max_size'],
-                      constants['map_width'], constants['map_height'], player, entities, encounters=encounters,
-                      level=level)
+                      constants['map_width'], constants['map_height'], player, entities, particles, particle_systems,
+                      encounters=encounters, level=level)
 
     # Initialize Message Log
     message_log = MessageLog(constants['message_x'], constants['message_width'], constants['message_height'])
@@ -124,4 +132,4 @@ def get_game_variables(constants, level=None):
     # Initialize Game State
     game_state = GameStates.PLAYER_TURN
 
-    return player, entities, game_map, message_log, game_state
+    return player, entities, particles, particle_systems, game_map, message_log, game_state

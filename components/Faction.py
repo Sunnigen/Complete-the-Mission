@@ -15,3 +15,13 @@ class Faction:
 
     def check_enemy(self, other_faction):
         return other_faction in FACTIONS.get(self.faction_name).get("enemy")
+
+    def change_faction(self, new_faction):
+        if new_faction not in FACTIONS.keys():
+            print('{} has an undefined faction! {} not in list of factions!'.format(self.owner.name, new_faction))
+
+        self.faction_name = new_faction
+
+
+
+

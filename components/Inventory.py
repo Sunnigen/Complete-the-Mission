@@ -1,16 +1,29 @@
 import tcod as libtcod
 
+from components.Position import Position
+
 from GameMessages import Message
 
 
 class Inventory:
-    def __init__(self, capacity, items=[]):
+    def __init__(self, capacity, items=None):
+        # Default argument of [] is mutable! Meaning it will save it's state between function calls.
         self.capacity = capacity
-        self.items = items
+        if not items:
+            self.items = []
+        else:
+            self.items = items
+
+    def check_item_by_index(self, item_json_index):
+        # Return Item if the Item Exists in Inventory by json_index
+        for item in self.items:
+            if item_json_index == item.json_index:
+                return item
+        return None
 
     @property
     def empty(self):
-        return False if len(self.items) > 0 else True
+        return len(self.items) < 1
 
     def add_item(self, item):
         results = []
@@ -27,6 +40,8 @@ class Inventory:
                 'message': Message('You pick up the %s.' % item.name, libtcod.blue)
             })
 
+            # Remove Item Component
+
             self.items.append(item)
 
         return results
@@ -35,7 +50,7 @@ class Inventory:
         results = []
         item_component = item_entity.item
         # Check if Item Has a "Use" or "Equip" Function
-        if item_component.use_function is None:
+        if not item_component.use_function:
             equippable_component = item_entity.equippable
             if equippable_component:
                 results.append({'equip': item_entity})
@@ -48,6 +63,8 @@ class Inventory:
             else:
                 kwargs = {**item_component.function_kwargs, **kwargs}
 
+                # Most Important Connecting Function
+                # Note: Pass the user and various catch-all-keyword-args
                 item_use_results = item_component.use_function(self.owner, **kwargs)
 
                 # Check if Item is Altered after Usage
@@ -69,18 +86,48 @@ class Inventory:
     def remove_item(self, item):
         self.items.remove(item)
 
-    def drop_item(self, item):
+    def drop_item(self, item_entity, entity_owner=''):
         results = []
 
         # Untoggle Item if Equipped
-        if self.owner.equipment.main_hand == item or self.owner.equipment.off_hand == item:
-            self.owner.equipment.toggle_equip(item)
+        if item_entity in self.owner.equipment.equipment_dict.values():
+            self.owner.equipment.toggle_equip(item_entity)
 
-        # Drop Item at Owner Location
-        item.x = self.owner.x
-        item.y = self.owner.y
-        self.remove_item(item)
-        results.append({'item_dropped': item, 'message': Message('You dropped the %s.' % item.name,
+        # Drop Item at Owner Location and Create/Update Position Component
+        if not item_entity.position:
+            position_component = Position(self.owner.position.x, self.owner.position.y)
+            item_entity.position = position_component
+        else:
+            item_entity.position.x, item_entity.position.y = self.owner.position.x, self.owner.position.y
+            print('actually updated position component!', item_entity.name)
+
+        self.remove_item(item_entity)
+        results.append({'item_dropped': item_entity, 'message': Message('{} dropped the {}.'.format(self.owner.name, item_entity.name),
                                                                  libtcod.yellow)})
+
+        return results
+
+    def drop_all_items(self):
+        results = []
+
+        while self.items:
+            item_entity = self.items.pop()
+            # Untoggle Item if Equipped
+            if self.owner.equipment:
+                if item_entity in self.owner.equipment.equipment_dict.values():
+                    self.owner.equipment.toggle_equip(item_entity)
+
+            # Drop Item at Owner Location and Create/Update Position Component
+            if not item_entity.position:
+                position_component = Position(self.owner.position.x, self.owner.position.y)
+                item_entity.position = position_component
+            else:
+                item_entity.position.x, item_entity.position.y = self.owner.position.x, self.owner.position.y
+                print('actually updated position component!', item_entity.name)
+
+            # self.remove_item(item_entity)
+            results.append({'item_dropped': item_entity,
+                            'message': Message('{} dropped the {}.'.format(self.owner.name, item_entity.name),
+                                               libtcod.yellow)})
 
         return results

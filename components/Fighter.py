@@ -1,20 +1,31 @@
-import tcod as libtcod
-
-
+import tcod
 from GameMessages import Message
 
 
 class Fighter:
-    def __init__(self, hp, defense, power, xp=0, fov=2, mob_level=None):
+    owner = None
+
+    def __init__(self, hp, defense, power, xp=0, fov_range=2, mob_level=None):
         self.base_max_hp = hp
         self.hp = hp
         self.base_defense = defense
         self.base_power = power
         self.xp = xp
         self.god_mode = 0
-        self.fov = fov
+        self.fov_range = fov_range
         self.mob_level = mob_level
 
+        # self.curr_fov = set()  # set containing coordinates of what fighter can actually see
+        self.curr_fov_map = None  # numpy 2d array of what fighter can actually see
+
+        # Stats
+        self.str = 0
+        self.dex = 0
+        self.agi = 0
+        self.wis = 0
+        self.int = 0
+        self.con = 0
+        
     @property
     def max_hp(self):
         if self.owner and self.owner.equipment:
@@ -40,14 +51,14 @@ class Fighter:
             bonus = 0
         return self.base_defense + bonus
 
-    def take_damage(self, amount):
+    def take_damage(self, amount, attacking_entity=None):
         results = []
         self.hp = max(0, self.hp - amount)
 
         # Entity has Died!
         if self.hp <= 0:
             if self.xp != 0:
-                results.append({'dead': self.owner, 'xp': self.xp})
+                results.append({'dead': self.owner, 'xp': [self.xp, attacking_entity]})
             else:
                 results.append({'dead': self.owner})
         return results
@@ -68,31 +79,34 @@ class Fighter:
         else:
             damage = self.power - target.fighter.defense
 
-
         if damage > 0:
             results.append({'message': Message('%s attacks %s for %s hit points.' % (
-                self.owner.name.capitalize(), target.name, str(damage)), libtcod.white)})
-            results.extend(target.fighter.take_damage(damage))
+                self.owner.name.capitalize(), target.name, str(damage)), tcod.white), "spawn_particle": ["hit", target.position.x, target.position.y, None]})
+            results.extend(target.fighter.take_damage(damage, self.owner))
         else:
             # print('%s attacks %s, but does no damage.' % (self.owner.name.capitalize(), target.name))
             results.append({'message': Message('%s attacks %s, but does no damage!' % (
-                self.owner.name.capitalize(), target.name), libtcod.white)})
+                self.owner.name.capitalize(), target.name), tcod.white)})
 
         return results
 
-    def interact(self, entity, **kwargs):
+    def interact(self, entity, interact_type='move', **kwargs):
         results = []
         map_object_component = entity.map_object
 
         if map_object_component:
-            # Pass Specific Kwargs to "Furniture" Class
+            # Pass Specific Kwargs to "Map Object" Class
             """
             Note:
             """
             kwargs = {**map_object_component.function_kwargs, **kwargs}
-
+            map_use_results = []
             # Process map object's "interact_function"
-            map_use_results = map_object_component.interact_function(self.owner, entity, **kwargs)
+
+            if interact_type == 'move':
+                map_use_results = map_object_component.interact_function(self.owner, entity, **kwargs)
+            elif interact_type == 'wait':
+                map_use_results = map_object_component.wait_function(self.owner, entity, **kwargs)
             results.extend(map_use_results)
 
         return results

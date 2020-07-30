@@ -1,0 +1,52 @@
+{
+  "hit": {
+    "name": "Hit Particle",
+    "lifetime": 2,
+    "fg": [255, 0, 63],
+    "char": 34,
+    "glyph": "\""
+  },
+  "poison_tick": {
+    "name": "Poison Particle",
+    "lifetime": 4,
+    "fg": [0, 255, 0],
+    "bg": [[255, 255, 255]]
+  },
+  "fire": {
+    "name": "Fire Particle",
+    "lifetime": 6,
+    "bg": [[255, 63, 0], [255, 188, 166], [128, 31, 0]],
+    "propagate": true,
+    "propagate_property": "flammable"
+  },
+  "confusion": {
+    "name": "Confusion Particle",
+    "lifetime": 4,
+    "fg": [255, 115, 185],
+    "char": 63,
+    "glyph": "?"
+  },
+  "lightning": {
+    "name": "Lightning Particle",
+    "lifetime": 4,
+    "bg": [[255, 255, 166], [255, 255, 0], [191, 191, 0]],
+    "fg": [255, 255, 255],
+    "char": 42,
+    "glyph": "*",
+    "propagate": true,
+    "propagate_property": "conductor"
+  },
+  "heal": {
+    "name": "Heal Particle",
+    "lifetime": 8,
+    "fg": [255, 0, 0],
+    "char": 43,
+    "glyph": "+"
+  },
+  "stove_fire": {
+    "name": "Stove Fire Particle",
+    "lifetime": 1,
+    "bg": [[191, 47, 0], [128, 31, 0], [64, 16, 0]],
+    "forever": true
+  }
+}

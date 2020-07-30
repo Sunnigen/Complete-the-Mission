@@ -1,19 +1,22 @@
 {
   "Player": {
     "ally": ["Player", "Rebels"],
-    "enemy": ["Imperials"]
+    "enemy": ["Imperials", "Mindless"]
   },
   "Imperials": {
     "ally": ["Imperials"],
-    "enemy": ["Player","Rebels"]
+    "enemy": ["Rebels", "Mindless"]
   },
   "Prisoners of War": {
     "ally": [],
-    "enemy": []
+    "enemy": ["Mindless"]
   },
   "Rebels": {
     "ally": ["Player", "Rebels"],
-    "enemy": ["Imperials"]
+    "enemy": ["Imperials", "Mindless"]
+  },
+  "Mindless": {
+    "ally": ["Mindless"],
+    "enemy": ["Player", "Rebels", "Imperials", "Prisoners of War"]
   }
-
 }

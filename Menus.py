@@ -1,7 +1,7 @@
 import tcod
 from tcod.image import Image as TcodImage
 
-
+from EquipmentSlots import EQUIPMENT_SLOT_NAME
 from loader_functions.JsonReader import obtain_tile_set
 
 TILE_SET = obtain_tile_set()
@@ -78,16 +78,29 @@ def inventory_menu(con, header, player, inventory_width, screen_width, screen_he
     if len(player.inventory.items) == 0:
         options = ['Inventory is empty.']
     else:
-        # options = [item.name for item in inventory.items]
         options = []
 
+        temporary_equip_dict = {value:key for key, value in player.equipment.equipment_dict.items()}
+
         for item in player.inventory.items:
-            if player.equipment.main_hand == item:
-                options.append('%s (on main hand)' % item.name)
-            elif player.equipment.off_hand == item:
-                options.append('%s (on off hand)' % item.name)
+
+            equipment = temporary_equip_dict.get(item, None)
+            if equipment:
+                options.append('{} ({})'.format(item.name, EQUIPMENT_SLOT_NAME[equipment]))
             else:
                 options.append(item.name)
+            # for equipment_slot, equipment in player.equipment.equipment_dict.items():
+            #     if equipment == item:
+            #         options.append('{} (on {})'.format(item.name, EQUIPMENT_SLOT_NAME[equipment_slot]))
+            #     else:
+            #         options.append(item.name)
+
+            # if player.equipment.main_hand == item:
+            #     options.append('%s (on main hand)' % item.name)
+            # elif player.equipment.off_hand == item:
+            #     options.append('%s (on off hand)' % item.name)
+            # else:
+            #     options.append(item.name)
 
     menu(con, header, options, inventory_width, screen_width, screen_height)
 
@@ -123,12 +136,12 @@ def map_screen(con, entities, game_map, header, map_width, map_height, screen_wi
 
     for entity in entities:
         if entity.stairs:
-            dungeon_map.put_pixel(entity.x, entity.y, entity.color)
+            dungeon_map.put_pixel(entity.position.x, entity.position.y, entity.color)
             continue
         if entity.fighter and not entity.ai:
-            dungeon_map.put_pixel(entity.x, entity.y, entity.color)
+            dungeon_map.put_pixel(entity.position.x, entity.position.y, entity.color)
         elif entity.ai:
-            dungeon_map.put_pixel(entity.x, entity.y, entity.color)
+            dungeon_map.put_pixel(entity.position.x, entity.position.y, entity.color)
 
     picture(con, game_map, dungeon_map, header, map_width, map_height, screen_width, screen_height, panel_height)
 

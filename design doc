@@ -1,0 +1,49 @@
+Complete the Mission:
+
+Synopsis: You are a captured soldier of the Undergrave Army within the confines of the Resinfaire State. Due to the
+damage sustained from the surprised attack, you have amnesia. The only memory that remains: "Complete the Mission".
+
+Berlin Interpretation Values:
+1. Random Dungeon Generation
+2. Permadeath
+3. Turn-Based
+4. Non-Model - Movement, battle and other actions take place in the same mode. Every action is available at any point in
+               the game.
+5. Emergent Game Systems - Allow several solutions to common goals. Item/monster or item/item interactions.
+6. Resource Management - Stamina, Hunger, Thirst, limited item capacity
+NO. 7. Hack and Slash - Player vs world, no diplomancy
+8. Exploration and Discovery
+
+
+Core Mechanic - Stealth
+    - Visible FOV
+        - By "focusing/wait" Player can view all FOV of every unit within Player's FOV and move accordingly.
+        - All NPCs are "Facing" a direction and cannot see behind them or far to their sides.
+
+    - MGS Alert/Evasion/Caution Modes
+        - UI Mode
+            - UI of Player will be red/yellow/light yellow depending on current mode
+        - Alert Mode
+            - Player is spotted and enemies have sounded alarm bell. Stronger enemies will appear from lower/upper
+              levels to assist.
+
+        - Caution Mode
+            - Player is spotted and current encounter is engaging Player. Enemies will call for help or to alarm bell if
+              unable to suppress Player or threat
+
+        - Evasion Mode
+            - Player has successfully evaded being seen after initial encounter, the area of last sighting will have
+              patrols causing the dungeon level to be more difficult to pass through.
+
+    - Lighting Mechanics
+        - More lit areas allow NPCs to have full FOV, dark areas reduce NPC FOV
+
+    - Sound Graphics
+        - All units has a "FOH"(Field of Hearing) that allows unit to "hear" visually in unexplored areas or areas out of
+          FOV.
+        - Player has a naturally higher FOH
+        - All "sounds" will have a graphic if outside of Player FOV
+        - If sound occurs outside of a unit's FOH and is ,
+
+
+

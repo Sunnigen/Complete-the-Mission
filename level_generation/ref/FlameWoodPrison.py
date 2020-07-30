@@ -103,7 +103,7 @@ class FlameWoodPrison:
 
         # Reiterate BSP for Sub Rooms
         map_x_start, map_y_start = 0, 0
-        self._leafs = self.iterate_bsp(entities, item_table, mob_table, map_width - 1, map_height - 1, map_x_start, map_y_start)
+        self._leafs = self.iterate_bsp(entities, item_table, mob_table, map_width, map_height, map_x_start, map_y_start)
         if len(self.rooms) > 2:
             # Search for Biggest Room
             max_iter = 100
@@ -164,9 +164,9 @@ class FlameWoodPrison:
         self.place_player_stairs(entities, player)
 
         # Populate and Designate Rooms
-        # self.designate_rooms(entities, game_map, no_entrances, one_entrances, two_entrances, three_entrances, multi_entrances,
-        #                      no_entrances_room, one_entrances_room, two_entrances_room, three_entrances_room,
-        #                      multi_entrances_room)
+        self.designate_rooms(entities, game_map, no_entrances, one_entrances, two_entrances, three_entrances, multi_entrances,
+                             no_entrances_room, one_entrances_room, two_entrances_room, three_entrances_room,
+                             multi_entrances_room)
 
         # Place Encounters in None Player Room
         # sub_rooms = self.sub_rooms.copy()
@@ -300,7 +300,7 @@ class FlameWoodPrison:
         # Place Player and Stairs
         self.start_room = start_room
         self.end_room = end_room
-        player.x, player.y = start_x, start_y
+        # player.position.x, player.position.y = start_x, start_y
         entities.append(place_stairs(self.game_map.dungeon_level, last_x, last_y))
 
     def assign_entrances(self, game_map):
@@ -353,7 +353,7 @@ class FlameWoodPrison:
                 number_of_items = randint(1, 5)
                 number_of_objects = randint(2, 5)
             elif c == 'hard_monster_room':
-                encounter_type = DefensiveMob
+                encounter_type = DefensiveAI
                 encounter = Encounter(room, len(game_map.encounters), encounter_type)
                 number_of_objects = randint(1, 2)
                 number_of_mobs = 1
@@ -372,13 +372,13 @@ class FlameWoodPrison:
             number_of_objects = 0
             number_of_mobs = 0
             if c == 'alarm_room':
-                encounter_type = DefensiveMob
+                encounter_type = DefensiveAI
                 encounter = Encounter(room, len(game_map.encounters), encounter_type)
                 number_of_items = randint(0, 2)
                 number_of_objects = randint(2, 5)
                 number_of_mobs = randint(0, 1)
             elif c == 'small_jail_cell':
-                encounter_type = DefensiveMob
+                encounter_type = DefensiveAI
                 encounter = Encounter(room, len(game_map.encounters), encounter_type)
                 number_of_items = randint(0, 2)
                 number_of_objects = randint(2, 5)
@@ -407,7 +407,7 @@ class FlameWoodPrison:
             number_of_objects = 0
             number_of_mobs = 0
             if c == 'small_jail_cell':
-                pop = [DefensiveMob, PatrolMob]
+                pop = [DefensiveAI, PatrolAI]
                 weights = [80, 20]
                 encounter_type = choices(population=pop,
                                          weights=weights,
@@ -418,7 +418,7 @@ class FlameWoodPrison:
                 number_of_objects = randint(2, 5)
                 number_of_mobs = randint(0, 1)
             elif c == 'medium_jail_cell':
-                pop = [DefensiveMob, PatrolMob]
+                pop = [DefensiveAI, PatrolAI]
                 weights = [80, 20]
                 encounter_type = choices(population=pop,
                                          weights=weights,
@@ -444,7 +444,7 @@ class FlameWoodPrison:
             number_of_mobs = 0
 
             if c == 'medium_jail_cell':
-                pop = [DefensiveMob, PatrolMob]
+                pop = [DefensiveAI, PatrolAI]
                 weights = [80, 20]
                 encounter_type = choices(population=pop,
                                          weights=weights,
@@ -455,7 +455,7 @@ class FlameWoodPrison:
                 number_of_objects = randint(2, 5)
                 number_of_mobs = randint(0, 3)
             elif c == 'large_jail_cell':
-                pop = [DefensiveMob, PatrolMob]
+                pop = [DefensiveAI, PatrolAI]
                 weights = [80, 20]
                 encounter_type = choices(population=pop,
                                          weights=weights,
@@ -576,7 +576,7 @@ class Leaf:  # used for the BSP tree algorithm
             # print('split_vertically')
             self.child_1 = Leaf(self.main_tree,
                                 self.x + inc,
-                                self.y + inc,
+                                self.y + inc ,
                                 split - inc,
                                 self.height - inc)
             self.child_2 = Leaf(self.main_tree,
@@ -634,7 +634,7 @@ class Leaf:  # used for the BSP tree algorithm
                 create_walled_room(bsp_tree.game_map, self.room)
             else:
                 # Carve out a room and add to main rooms
-                create_room(bsp_tree.game_map, self.room)
+                # create_room(bsp_tree.game_map, self.room)
                 self.main_tree.rooms.append(self.room)
 
     def get_bsp_room(self):

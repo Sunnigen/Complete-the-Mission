@@ -32,7 +32,7 @@ class CellularAutomataAlgorithm:
         self.neighbors = 4  # number of neighboring walls for this cell to become a wall
 
     def generate_level(self, game_map, dungeon_level, max_rooms, room_min_size, room_max_size, map_width, map_height,
-                       player, entities, item_table, mob_table, object_table):
+                       player, entities, item_table, mob_table):
         # def generate_level(self, game_map, map_width, map_height):
         # Creates an empty 2D array or clears existing array
         self.game_map = game_map
@@ -60,13 +60,13 @@ class CellularAutomataAlgorithm:
             self.reset_generation()
             entities = [player]
             self.generate_level(game_map, dungeon_level, max_rooms, room_min_size, room_max_size, map_width,
-                                 map_height, player, entities, item_table, mob_table, object_table)
+                                 map_height, player, entities, item_table, mob_table)
             return False
 
         # Place Player and Stairs, Open Floor
         # TODO: Connect caves 1 and 2
-        player.x, player.y = self.cave_centers[0].center
-        create_floor(game_map, player.x, player.y)
+        player.position.x, player.position.y = self.cave_centers[0].center
+        create_floor(game_map, player.position.x, player.position.y)
         x, y = self.cave_centers[-1].center
         entities.append(place_stairs(self.dungeon_level, x, y))
         create_floor(game_map, x, y)
@@ -75,7 +75,7 @@ class CellularAutomataAlgorithm:
 
         # Spawn Entities
         for cave in self.cave_centers:
-            place_entities(game_map, dungeon_level, cave, entities, item_table, mob_table, object_table)
+            place_entities(game_map, dungeon_level, cave, entities, item_table, mob_table)
             # debug find centers
 
             # cx, cy = cave.center

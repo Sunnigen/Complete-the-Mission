@@ -33,7 +33,7 @@ USE_PREFABS = False
 class UserInterface:
     def __init__(self):
         # libtcod.console_set_custom_font('assets/dejavu_wide16x16_gs_tc.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
-        libtcod.console_set_custom_font('assets/prestige8x8_gs_tc.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
+        libtcod.console_set_custom_font('dejavu_wide16x16_gs_tc.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
         libtcod.console_init_root(SCREEN_WIDTH, SCREEN_HEIGHT, 'Roguelike Dungeon Comparison',
                                   False)  # TODO: Change Game Name
         self.con = libtcod.console_new(SCREEN_WIDTH, SCREEN_HEIGHT)

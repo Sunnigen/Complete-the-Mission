@@ -1,69 +1,5 @@
 {
-  "undergrave_guard": {
-    "name": "Guard",
-    "char": 103,
-    "glyph": "g",
-    "color": [191, 0, 0],
-    "hp": 20,
-    "def": 1,
-    "att": 3,
-    "xp": 35,
-    "spawn_chance": [[80, 1]],
-    "mob_level": 1,
-    "fov": 4
-  },
-  "undergrave_dog": {
-    "name": "Guard Dog",
-    "char": 100,
-    "glyph": "d",
-    "color": [191, 95, 0],
-    "hp": 10,
-    "def": 0,
-    "att": 5,
-    "xp": 35,
-    "spawn_chance": [[10, 1], [50, 5]],
-    "mob_level": 2,
-    "fov": 7
-  },
-  "undergrave_officer": {
-    "name": "Officer",
-    "char": 111,
-    "glyph": "o",
-    "color": [191, 0, 47],
-    "hp": 35,
-    "def": 2,
-    "att": 5,
-    "xp": 70,
-    "spawn_chance": [[10, 2], [25, 4], [30, 7]],
-    "mob_level": 4,
-    "fov": 4
-  },
-  "weak_prisoner": {
-    "name": "Prisoner",
-    "char": 112,
-    "glyph": "p",
-    "color": [128, 128, 0],
-    "hp": 5,
-    "def": 0,
-    "att": 0,
-    "xp": 10,
-    "spawn_chance": [[100, 1]],
-    "mob_level": 1,
-    "fov": 4
-  },
-  "strong_prisoner": {
-    "name": "Red Eye Patch",
-    "char": 112,
-    "glyph": "p",
-    "color": [191, 191, 0],
-    "hp": 5,
-    "def": 0,
-    "att": 0,
-    "xp": 10,
-    "spawn_chance": [[100, 1]],
-    "mob_level": 1,
-    "fov": 4
-  },
+
   "player": {
     "name": "Player",
     "char": 64,
@@ -73,9 +9,9 @@
     "def": 0,
     "att": 0,
     "xp": 0,
-    "spawn_chance": [[0, 1]],
+    "spawn_chance": [[0, 100]],
     "mob_level": 99,
-    "fov": 10
+    "fov_range": 10
   },
   "rebel_fighter": {
     "name": "Rebel Fighter",
@@ -86,9 +22,10 @@
     "def": 0,
     "att": 3,
     "xp": 25,
-    "spawn_chance": [[80, 1]],
+    "spawn_chance": [[0, 100]],
     "mob_level": 1,
-    "fov": 8
+    "fov_range": 8,
+    "inventory": ["leather_boots", "leather_gloves", "leather_greaves", "leather_headgear", "leather_brigandine", "wooden_shield", "iron_sword"]
   },
   "rebel_squad_leader": {
     "name": "Rebel Squad Leader",
@@ -99,9 +36,10 @@
     "def": 2,
     "att": 4,
     "xp": 350,
-    "spawn_chance": [[80, 1]],
+    "spawn_chance": [[0, 100]],
     "mob_level": 5,
-    "fov": 10
+    "fov_range": 10,
+    "inventory": ["leather_boots", "leather_gloves", "leather_greaves", "leather_headgear", "leather_brigandine", "wooden_shield", "iron_sword"]
   },
   "imperial_warrior": {
     "name": "Imperial Warrior",
@@ -112,32 +50,93 @@
     "def": 1,
     "att": 3,
     "xp": 50,
-    "spawn_chance": [[80, 1]],
-    "fov": 8
+    "spawn_chance": [[0, 100]],
+    "mob_level": 10,
+    "fov_range": 8,
+    "inventory": ["imperial_battle_shield","imperial_longsword","imperial_chainmail_leggings", "imperial_chainmail_coif", "imperial_chainmail_hauberk"]
   },
   "imperial_knight": {
     "name": "Imperial Knight",
     "char": 107,
     "glyph": "k",
     "color": [191, 0, 0],
-    "hp": 25,
+    "hp": 40,
     "def": 2,
     "att": 3,
     "xp": 100,
-    "spawn_chance": [[80, 1]],
-    "fov": 8
+    "spawn_chance": [[0, 100]],
+    "fov_range": 11,
+    "inventory": ["imperial_battle_shield","imperial_longsword","imperial_chainmail_leggings", "imperial_chainmail_coif", "imperial_chainmail_hauberk"]
   },
   "imperial_captain": {
     "name": "Imperial Captain",
     "char": 107,
     "glyph": "K",
     "color": [255, 0, 0],
-    "hp": 30,
+    "hp": 65,
     "def": 4,
     "att": 4,
     "xp": 500,
-    "spawn_chance": [[80, 1]],
+    "spawn_chance": [[0, 100]],
+    "mob_level": 15,
+    "fov_range": 10,
+    "inventory": ["imperial_battle_shield","imperial_longsword","imperial_chainmail_leggings", "imperial_chainmail_coif", "imperial_chainmail_hauberk"]
+  },
+  "orc": {
+    "name": "Orc",
+    "char": 111,
+    "glyph": "o",
+    "color": [0, 191, 0],
+    "hp": 20,
+    "def": 0,
+    "att": 4,
+    "xp": 35,
+    "spawn_chance": [[80, 1], [60, 5], [0, 7]],
+    "mob_level": 1,
+    "fov_range": 5,
+    "inventory": ["healing_potion"]
+    },
+  "troll": {
+    "name": "Troll",
+    "char": 84,
+    "glyph": "T",
+    "color": [191, 151, 96],
+    "hp": 30,
+    "def": 2,
+    "att": 8,
+    "xp": 100,
+    "spawn_chance": [[15, 3], [30, 5], [60, 7]],
+    "mob_level": 4,
+    "fov_range": 3,
+    "inventory": ["healing_potion"]
+    },
+  "goblin": {
+    "name": "Goblin",
+    "char": 103,
+    "glyph": "g",
+    "color": [0, 0, 191],
+    "hp": 15,
+    "def": 0,
+    "att": 5,
+    "xp": 50,
+    "spawn_chance": [[30, 1], [40, 3], [60, 5]],
+    "mob_level": 2,
+    "fov_range": 5,
+    "inventory": ["healing_potion"]
+
+  },
+  "ogre": {
+    "name": "Ogre",
+    "char": 79,
+    "glyph": "O",
+    "color": [158, 134, 100],
+    "hp": 50,
+    "def": 0,
+    "att": 10,
+    "xp": 500,
+    "spawn_chance": [[0, 99]],
     "mob_level": 5,
-    "fov": 10
+    "fov_range": 5
+
   }
 }

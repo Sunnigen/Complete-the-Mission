@@ -60,13 +60,13 @@
     "tile_cost": 1
   },
   "4": {
-    "name": "unused",
-    "name2": "unused",
+    "name": "Scorched Ground",
+    "name2": "scorched_ground",
     "type": "terrain",
-    "char": 101,
-    "glyph": "e",
-    "color": [255, 255, 166],
-    "fov_char": 101,
+    "char": 46,
+    "glyph": ".",
+    "color": [32, 8, 0],
+    "fov_char": 46,
     "breakable": false,
     "movable": false,
     "walkable": true,
@@ -91,16 +91,18 @@
     "fov": false,
     "hp": 0,
     "def": 5,
-    "interact_function": "unlock",
-    "tile_cost": 5
+    "interact_function": "unlock_door",
+    "wait_function": "see_through_key_hole",
+    "tile_cost": 98,
+    "properties": ["flammable"]
   },
   "6": {
     "name": "Wooden Door",
-    "name2": "open_wooden_door",
+    "name2": "Wooden Door(Open)",
     "type": "object",
     "char": 68,
     "glyph": "D",
-    "color": [213, 187, 178],
+    "color": [0, 0, 0],
     "fov_char": 68,
     "spawn_chance": 0,
     "item_level": 1,
@@ -110,9 +112,10 @@
     "transparent": true,
     "fov": true,
     "hp": 0,
-    "def": 999,
-    "interact_function": "nothing",
-    "tile_cost": 1
+    "def": 59,
+    "wait_function": "lock_door",
+    "tile_cost": 1,
+    "properties": ["flammable"]
   },
   "7": {
     "name": "Chair",
@@ -125,12 +128,12 @@
     "spawn_chance": 100,
     "item_level": 1,
     "movable": false,
-    "breakable": false,
+    "breakable": true,
     "walkable": true,
     "transparent": true,
     "fov": true,
-    "interact_function": "nothing",
-    "tile_cost": 99
+    "tile_cost": 5,
+    "properties": ["flammable"]
   },
   "8": {
     "name": "Table",
@@ -143,12 +146,13 @@
     "spawn_chance": 100,
     "item_level": 1,
     "movable": false,
-    "breakable": false,
+    "breakable": true,
     "walkable": false,
     "transparent": true,
     "fov": true,
     "interact_function": "push",
-    "tile_cost": 99
+    "tile_cost": 5,
+    "properties": ["flammable"]
    },
   "9": {
     "name": "Chest",
@@ -156,7 +160,7 @@
     "type": "object",
     "char": 224,
     "glyph": "α",
-    "color":[198, 198, 0],
+    "color":[64, 64, 0],
     "fov_char": 224,
     "spawn_chance": 100,
     "item_level": 1,
@@ -167,7 +171,7 @@
     "fov": true,
     "interact_function": "empty_chest",
     "tile_cost": 0,
-    "inventory_capacity": 3
+    "inventory_capacity": 1
   },
   "10": {
     "name": "Chest",
@@ -175,7 +179,7 @@
     "type": "object",
     "char": 225,
     "glyph": "ß",
-    "color":[128, 128, 0],
+    "color":[191, 191, 0],
     "fov_char": 225,
     "spawn_chance": 100,
     "item_level": 1,
@@ -187,7 +191,7 @@
     "inventory": true,
     "interact_function": "open_chest",
     "tile_cost": 0,
-    "inventory_capacity": 3
+    "inventory_capacity": 1
   },
   "11": {
     "name": "Stairs",
@@ -195,11 +199,12 @@
     "type": "terrain",
     "char": 62,
     "glyph": ">",
-    "color": [255, 191, 0],
-    "fov_char": 1,
+    "color": [0, 0, 0],
+    "fg_color": [255, 191, 0],
+    "fov_char": 62,
     "breakable": false,
     "movable": false,
-    "walkable": false,
+    "walkable": true,
     "transparent": true,
     "fov": true,
     "interact_function": "next_floor",
@@ -230,12 +235,13 @@
     "color": [0, 0, 0],
     "fg_color": [0, 191, 0],
     "fov_char": 116,
-    "breakable": false,
+    "breakable": true,
     "movable": false,
     "walkable": false,
     "transparent": false,
     "fov": false,
-    "tile_cost": 0
+    "tile_cost": 99,
+    "properties": ["flammable"]
   },
 
   "14": {
@@ -252,7 +258,8 @@
     "walkable": false,
     "transparent": true,
     "fov": true,
-    "tile_cost": 0
+    "tile_cost": 0,
+    "properties": ["conductor"]
   },
 
   "15": {
@@ -266,11 +273,12 @@
     "fov_char": 71,
     "breakable": true,
     "movable": false,
-    "walkable": true,
+    "walkable": false,
     "transparent": true,
     "fov": true,
     "interact_function": "open_gate",
-    "tile_cost": 99
+    "tile_cost": 98,
+    "properties": ["conductor"]
   },
   "16":  {
     "name": "Vine",
@@ -286,7 +294,8 @@
     "walkable": true,
     "transparent": true,
     "fov": true,
-    "tile_cost": 1
+    "tile_cost": 1,
+    "properties": ["flammable"]
     },
   "17":  {
     "name": "Puddle",
@@ -296,12 +305,13 @@
     "glyph": ".",
     "color": [0, 70, 140],
     "fov_char": 46,
-    "breakable": true,
+    "breakable": false,
     "movable": false,
     "walkable": true,
     "transparent": true,
     "fov": true,
-    "tile_cost": 1
+    "tile_cost": 1,
+    "properties": ["conductor"]
     },
   "18": {
     "name": "Crate",
@@ -317,10 +327,12 @@
     "walkable": false,
     "transparent": true,
     "fov": true,
-    "tile_cost": 99,
-    "interact_function": "break_box",
+    "tile_cost": 3,
+    "interact_function": "break_container",
     "inventory_capacity": 1,
-    "inventory": true
+    "inventory": true,
+    "properties": ["flammable"]
+
   },
   "19": {
     "name": "Barrel",
@@ -336,10 +348,11 @@
     "walkable": false,
     "transparent": true,
     "fov": true,
-    "tile_cost": 99,
-    "interact_function": "break_box",
+    "tile_cost": 3,
+    "interact_function": "break_container",
     "inventory_capacity": 1,
-    "inventory": true
+    "inventory": true,
+    "properties": ["flammable"]
   },
   "20": {
     "name": "Jail Cot",
@@ -350,12 +363,13 @@
     "color": [0, 0, 0],
     "fg_color":[158, 133, 100],
     "fov_char": 205,
-    "breakable": false,
+    "breakable": true,
     "movable": false,
     "walkable": true,
     "transparent": true,
     "fov": true,
-    "tile_cost": 1
+    "tile_cost": 1,
+    "properties": ["flammable"]
   },
   "21":{
     "name": "Toilet",
@@ -382,11 +396,12 @@
     "color": [128, 128, 128],
     "fg_color": [128, 0, 0],
     "fov_char": 205,
-    "breakable": false,
+    "breakable": true,
     "movable": false,
     "walkable": true,
     "transparent": true,
     "fov": true,
+    "properties": ["flammable"],
     "tile_cost": 1
   },
   "23": {
@@ -398,11 +413,12 @@
     "color": [0, 0, 0],
     "fg_color": [100, 133, 100],
     "fov_char": 30,
-    "breakable": false,
+    "breakable": true,
     "movable": false,
     "walkable": false,
     "transparent": true,
     "fov": true,
+    "properties": ["flammable"],
     "tile_cost": 0
   },
   "24": {
@@ -468,7 +484,178 @@
     "transparent": true,
     "fov": true,
     "interact_function": "table_pick_up",
+    "tile_cost": 5,
+    "inventory_capacity": 1,
+    "inventory": true
+  },
+  "28": {
+    "name": "Table",
+    "name2": "table_north",
+    "type": "object",
+    "char": 30,
+    "glyph": "▲",
+    "color": [31, 31, 31],
+    "fg_color": [191, 191, 191],
+    "fov_char": 30,
+    "breakable": true,
+    "movable": false,
+    "walkable": false,
+    "transparent": true,
+    "fov": true,
+    "tile_cost": 5
+  },
+  "29": {
+    "name": "Table",
+    "name2": "table_south",
+    "type": "object",
+    "char": 31,
+    "glyph": "▼",
+    "color": [31, 31, 31],
+    "fg_color": [191, 191, 191],
+    "fov_char": 31,
+    "breakable": true,
+    "movable": false,
+    "walkable": false,
+    "transparent": true,
+    "fov": true,
+    "tile_cost": 5
+  },
+  "30": {
+    "name": "Table",
+    "name2": "table_east",
+    "type": "object",
+    "char": 16,
+    "glyph": "►",
+    "color": [31, 31, 31],
+    "fg_color": [191, 191, 191],
+    "fov_char": 16,
+    "breakable": true,
+    "movable": false,
+    "walkable": false,
+    "transparent": true,
+    "fov": true,
+    "tile_cost": 5
+  },
+  "31": {
+    "name": "Table",
+    "name2": "table_west",
+    "type": "object",
+    "char": 17,
+    "glyph": "◄",
+    "color": [31, 31, 31],
+    "fg_color": [191, 191, 191],
+    "fov_char": 17,
+    "breakable": true,
+    "movable": false,
+    "walkable": false,
+    "transparent": true,
+    "fov": true,
+    "tile_cost": 5
+  },
+  "32": {
+    "name": "Stove",
+    "name2": "stove",
+    "type": "object",
+    "char": 30,
+    "glyph": "▲",
+    "color": [0, 0, 0],
+    "fg_color": [255, 223, 191],
+    "fov_char": 30,
+    "breakable": true,
+    "movable": false,
+    "walkable": false,
+    "transparent": true,
+    "fov": true,
+    "tile_cost": 0,
+    "particle": "stove_fire",
+    "interact_function": "burn"
+  },
+  "33": {
+    "name": "Sink",
+    "name2": "sink",
+    "type": "object",
+    "char": 224,
+    "glyph": "α",
+    "color": [0, 0, 191],
+    "fg_color": [128, 128, 191],
+    "fov_char": 30,
+    "breakable": true,
+    "movable": false,
+    "walkable": false,
+    "transparent": true,
+    "fov": true,
+    "tile_cost": 0
+  },
+  "34": {
+    "name": "Chains",
+    "name2": "chains",
+    "type": "object",
+    "char": 67,
+    "glyph": "C",
+    "color": [0, 0, 0],
+    "fg_color": [95, 95, 95],
+    "fov_char": 67,
+    "breakable": false,
+    "movable": false,
+    "walkable": false,
+    "transparent": true,
+    "fov": true,
+    "tile_cost": 2,
+    "wait_function": "unlock_chains"
+  },
+  "35": {
+    "name": "Iron Gate",
+    "name2": "iron_gate",
+    "type": "object",
+    "char": 71,
+    "glyph": "G",
+    "color": [94, 75, 47],
+    "fg_color": [191, 191, 191],
+    "fov_char": 71,
+    "breakable": true,
+    "movable": false,
+    "walkable": false,
+    "transparent": true,
+    "fov": true,
+    "interact_function": "event_gate",
+    "tile_cost": 98,
+    "properties": ["conductor"]
+  },
+  "36": {
+    "name": "Spike",
+    "name2": "spike",
+    "type": "object"
+  },
+  "37": {
+    "name": "River",
+    "name2": "river",
+    "type": "terrain",
+    "char": 126,
+    "glyph": "~",
+    "color": [0, 127, 255],
+    "fov_char": 126,
+    "breakable": false,
+    "movable": false,
+    "walkable": true,
+    "transparent": true,
+    "fov": true,
+    "tile_cost": 50,
+    "properties": ["conductor"]
+  },
+  "38": {
+    "name": "Palisade",
+    "name2": "vertical_palisade",
+    "type": "terrain",
+    "char": 186,
+    "glyph": "║",
+    "color": [63, 50, 31],
+    "fov_char": 186,
+    "breakable": true,
+    "movable": false,
+    "walkable": false,
+    "transparent": false,
+    "fov": false,
     "tile_cost": 99,
-    "inventory_capacity": 1
+    "properties": ["flammable"]
   }
 }

@@ -1,10 +1,3 @@
-import math
-
-import tcod as libtcod
-from tcod.path import AStar
-
-from components.AI import get_direction
-from components.Faction import Faction
 from components.Item import Item
 from ItemFunctions import *
 from RenderFunctions import RenderOrder
@@ -14,15 +7,19 @@ class Entity:
     """
     A generic object to represent players, enemies, items, etc.
     """
-    def __init__(self, x, y, char, color, name, json_index, blocks=False, render_order=RenderOrder.CORPSE, fighter=None,
-                 ai=None, item=None, inventory=None, stairs=None, level=None, equipment=None, equippable=None,
-                 fov_color=None, furniture=None, faction=None):
-        self.x = x
-        self.y = y
+    def __init__(self, char, color, name, json_index, position=None, blocks=False, render_order=RenderOrder.CORPSE,
+                 fighter=None, ai=None, item=None, inventory=None, stairs=None, level=None, equipment=None,
+                 equippable=None, furniture=None, faction=None, particle=None, dialogue=None):
+        # Required Components
+        # self.x = x
+        # self.y = y
         self.char = char
         self.color = color
         self.name = name
         self.json_index = json_index
+
+        # "Optional" Components
+        self.position = position
         self.blocks = blocks
         self.render_order = render_order
         self.fighter = fighter
@@ -33,9 +30,10 @@ class Entity:
         self.level = level
         self.equipment = equipment
         self.equippable = equippable
-        self.fov_color = fov_color  # color if entity if NOT within FOV, but explored
         self.map_object = furniture
         self.faction = faction
+        self.particle = particle
+        self.dialogue = dialogue
 
         if self.faction:
             self.faction.owner = self
@@ -74,7 +72,16 @@ class Entity:
         if self.map_object:
             self.map_object.owner = self
 
-    def change_map_object(self, tile_data, json_index):
+        if self.particle:
+            self.particle.owner = self
+
+        if self.position:
+            self.position.owner = self
+
+        if self.dialogue:
+            self.dialogue.owner = self
+
+    def change_entity(self, tile_data, json_index):
         # print('change_map_object')
         if self.map_object:
             self.char = tile_data.get("char")
@@ -82,58 +89,8 @@ class Entity:
             self.color = tile_data.get("color")
             self.json_index = json_index
 
-            # Update Furniture Class
+            # Update MapObject Class
             self.map_object.update(tile_data)
 
-    def move(self, dx, dy):
-        # Move the entity by a given amount
-
-        self.x += dx
-        self.y += dy
-
-    def move_towards(self, target_x, target_y, game_map, entities):
-        dx = target_x - self.x
-        dy = target_y - self.y
-        distance = math.sqrt(dx ** 2 + dy ** 2)
-        if distance == 0:
-            return
-        dy = int(round(dy / distance))
-        dx = int(round(dx / distance))
-
-        if not (game_map.is_blocked(self.x + dx, self.y + dy) or get_blocking_entities_at_location(entities, self.x + dx
-                , self.y + dy)):
-
-            self.move(dx, dy)
-
-    def move_astar(self, target_x, target_y, entities, game_map, fov_map):
-
-        # TODO: Store astar path and update if only map/situation changes
-        # astar = AStar(game_map.transparent.astype(int), 1.41)
-        astar = AStar(game_map.walkable.astype(int), 1.41)
-        astar_path = astar.get_path(self.y, self.x, target_y, target_x)
-        return astar_path
-
-    def distance(self, x, y):
-        return math.sqrt((x - self.x) ** 2 + (y - self.y) ** 2)
-
-    def distance_to(self, other_x, other_y):
-        dx = other_x - self.x
-        dy = other_y - self.y
-        return math.sqrt(dx ** 2 + dy ** 2)
-
-
-def get_blocking_entities_at_location(entities, destination_x, destination_y):
-    # Check if Entity is "Blocking" at X, Y Location Specified
-    for entity in entities:
-        if entity.blocks and entity.x == destination_x and entity.y == destination_y:
-            return entity
-
-    return None
-
-
-def get_blocking_object_at_location(map_objects, destination_x, destination_y):
-    # Check if Object is "Blocking" at X, Y Location Specified
-    for map_object in map_objects:
-        if map_object.x == destination_x and map_object.y == destination_y:
-            return map_object
-    return None
+    def __repr__(self):
+        return "Entity json_index:{} name:{} position:{} render_order:{}".format(self.json_index, self.name, self.position, self.render_order)
