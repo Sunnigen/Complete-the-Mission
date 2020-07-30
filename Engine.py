@@ -1,24 +1,34 @@
 # https://github.com/marukrap/RoguelikeDevResources
 # http://bfnightly.bracketproductions.com/rustbook/chapter_16.html
+from collections import deque
+from copy import copy
+import collections
 from functools import partial
+from math import ceil
+import textwrap
 
 import numpy as np
 import tcod
 import tcod.tileset
 
+from components.AI import FollowAI
+from components.Particle import Particle, ParticleSystem
+from components.Position import Position
 from GameMessages import Message
-from DeathFunctions import kill_player, kill_monster
-from Entity import get_blocking_entities_at_location, get_blocking_object_at_location
+from DeathFunctions import kill_player, kill_mob
+from Entity import Entity
 from FOVFunctions import definite_enemy_fov, initialize_fov, recompute_fov
 from GameStates import GameStates
 from InputHandlers import handle_debug_menu, handle_no_action, handle_player_turn_keys, \
     handle_player_dead_keys, handle_targeting_keys, handle_inventory_keys, handle_level_up_menu, \
-    handle_character_screen, no_key_action
+    handle_character_screen, no_key_action, handle_dialogue
 from loader_functions.InitializeNewGame import get_constants, get_game_variables
 from loader_functions.DataLoaders import load_game, save_game
+from loader_functions.JsonReader import obtain_particles, obtain_tile_set
+from map_objects.GameMapUtils import get_blocking_entities_at_location, get_map_object_at_location
 from Menus import character_screen, debug_menu, inventory_menu, level_up_menu, map_screen, menu, message_box, \
     select_level
-from RenderFunctions import draw_entity, get_info_under_mouse, obtain_viewport_dimensions, render_bar, render_viewport
+from RenderFunctions import draw_entity, draw_particle_entity, obtain_viewport_dimensions, RenderOrder, render_bar, render_viewport
 
 TITLE = 'Complete the Mission'
 AUTHOR = 'Sunnigen'
@@ -30,6 +40,10 @@ ROOT_CONSOLE = tcod.console_init_root(w=CONSTANTS['screen_width'], h=CONSTANTS['
 current_screen = None
 NUM_KEYS = [tcod.event.K_1, tcod.event.K_2, tcod.event.K_3, tcod.event.K_4, tcod.event.K_5, tcod.event.K_6,
             tcod.event.K_7, tcod.event.K_8, tcod.event.K_9]
+
+
+PARTICLES = obtain_particles()
+TILE_SET = obtain_tile_set()
 
 
 class Controller(tcod.event.EventDispatch):
@@ -70,7 +84,7 @@ class Title(Controller):
 
         # Check if Existing Game Exists
         try:
-            a,b,c,d,e = load_game()
+            a,b,c,d,e,f,g = load_game()
         except FileNotFoundError:
             print('TODO: Blank out "Continue"')
 
@@ -151,23 +165,46 @@ class Game(Controller):
     side_panel = None
     popup_panel = None
 
+    particles = []
+    particle_systems = []
+
+    # Dialogue Panel
+    dialogue_panel = None
+    current_dialogue = ''
+    total_dialogue = []
+    entity_dialogue = None
+    dialogue_pane_width = 16
+    dialogue_line_count = 0
+
+    # Mouse Selection for Targetting
+    mouse_target_type = None
+    mouse_targets = []
+    mouse_target_range = 0
+
     def __init__(self, **kwargs):
         super(Game, self).__init__(**kwargs)
         # Preload Existing Game
         try:
-            self.player, self.entities, self.game_map, self.message_log, self.game_state = load_game()
+            self.player, self.entities, self.particles, self.particle_systems, self.game_map, self.message_log, self.game_state = load_game()
             self.game_map.player = self.player  # connect player from screen to player from game_map
-            self.game_map.transparent[self.player.y][self.player.x] = True  # unblock current position
+            self.game_map.transparent[self.player.position.y][self.player.position.x] = True  # unblock current position
             self.initialize_loaded_game()  # perform checks to ensure game is "truly" loaded
         except FileNotFoundError:
             pass
+
+        # self.dialogue_panel =
+
+    def reset_mouse_targets(self):
+        self.mouse_target_type = None
+        self.mouse_targets = [self.mouse_pos]
+        self.mouse_target_range = 0
 
     def on_enter(self):
         pass
 
     def exit_current_game(self, parameter):
         # Save and Exit Current Game
-        save_game(self.player, self.entities, self.game_map, self.message_log, self.game_state)
+        save_game(self.player, self.entities, self.particles, self.particle_systems, self.game_map, self.message_log, self.game_state)
         change_screen(parameter)
 
     def ev_keydown(self, event: tcod.event.KeyDown):
@@ -178,23 +215,26 @@ class Game(Controller):
         3. Enact functions connected to that input
         """
         action = MENU_HANDLING[self.game_state](engine=self, key=event, game_state=self.game_state, player=self.player)
-        try:
-            action()
-        except TypeError as error:
-            print('action:', action)
-            print('game state:', self.game_state)
-            print('previous game state', self.previous_game_state)
-            print('error:', error)
-            self.exit_program()
+        action()
+        # try:
+        #     action()
+        # except TypeError as error:
+        #     print('action:', action)
+        #     print('game state:', self.game_state)
+        #     print('previous game state', self.previous_game_state)
+        #     print('error:', error)
+        #     self.exit_program()
 
         super(Game, self).ev_keydown(event)
 
     def move(self, dx, dy):
-        destination_x = self.player.x + dx
-        destination_y = self.player.y + dy
+        destination_x = self.player.position.x + dx
+        destination_y = self.player.position.y + dy
 
         # Block Player from Moving Through Obstacle
         if self.game_map.is_within_map(destination_x, destination_y):
+
+            map_object_entity = get_map_object_at_location(self.game_map.map_objects, destination_x, destination_y)
 
             # Check if Map is Walkable
             if not self.game_map.is_blocked(destination_x, destination_y):
@@ -208,52 +248,130 @@ class Game(Controller):
                         # Enemy
                         attack_results = self.player.fighter.attack(target)
                         self.player_turn_results.extend(attack_results)
-                    elif self.player.faction.check_ally(target.faction.faction_name):
+                        self.game_state = GameStates.ENEMY_TURN
+                    # elif not self.player.faction.check_ally(target.faction.faction_name):
                         # Ally
-                        self.player_turn_results.extend([{'message': Message('You bump into a friendly %s.' %
-                                                                             target.name)}])
                     else:
+                        # Switch Player with Entity, if Entity is Following Player
+                        # print('# Switch Player with Entity, if Entity is Following Player')
+                        # print('AI:', target.ai)
+                        if isinstance(target.ai, FollowAI):
+                            if target.ai.follow_entity == self.player:
+                                old_x, old_y = self.player.position.x, self.player.position.y
+                                new_x, new_y = target.position.x, target.position.y
+                                self.player.position.x, self.player.position.y = new_x, new_y
+                                target.position.x, target.position.y = old_x, old_y
+                                self.game_state = GameStates.ENEMY_TURN
+
+                        else:
+                            self.dialogue(target)
+                    # else:
                         # Neutral
-                        self.player_turn_results.extend([{'message': Message('You bump into a %s.' % target.name)}])
+                        # self.player_turn_results.extend([{'message': Message('You bump into a %s.' % target.name)}])
+                        # self.game_state = GameStates.ENEMY_TURN
 
                 else:
-                    self.game_map.transparent[self.player.y][self.player.x] = True  # unblock previous position
-                    self.game_map.transparent[self.player.y + dy][self.player.x + dx] = False  # block new position
-                    self.update_mouse_pos(dx, dy)
-                    self.player.move(dx, dy)
+                    self.game_map.tile_cost[self.player.position.y][self.player.position.x] = TILE_SET.get("%s" % self.game_map.tileset_tiles[self.player.position.y][self.player.position.x]).get('tile_cost')
+                    # self.update_mouse_pos(dx, dy)
+                    self.player.position.move(dx, dy)
                     self.fov_recompute = True
+                    self.game_map.tile_cost[destination_y][destination_x] = 99
+                    self.game_state = GameStates.ENEMY_TURN
 
+                    # Reset Mouse
+                    self.mouse_pos = None
+                    self.mouse_targets = []
+
+            # Check if Location has a Map Object by "Bumping" Into it or "Waiting" next to it
+            elif map_object_entity:
+                interact_results = self.player.fighter.interact(map_object_entity, interact_type='move',
+                                                                target_inventory=self.player.inventory,
+                                                                entities=self.entities, reveal_all=self.reveal_all,
+                                                                game_map=self.game_map, player=self.player)
+                self.player_turn_results.extend(interact_results)
                 self.game_state = GameStates.ENEMY_TURN
 
-            # Check if Location has a Map Object by "Bumping" Into it
-            elif self.game_map.transparent[destination_y][destination_x]:
-                map_object_entity = \
-                    get_blocking_object_at_location(self.game_map.map_objects, destination_x, destination_y)
+            elif self.game_map.transparent[destination_y][destination_x] and self.game_map.tile_cost[destination_y][destination_x] == 0:
+                pass
+                # print('interact with entity other side of transparent object')
+                # target = get_blocking_entities_at_location(self.entities, destination_x, destination_y)
 
-                # Interaction with Map Object Entity
-                if map_object_entity:
-                    interact_results = self.player.fighter.interact(map_object_entity,
-                                                                    target_inventory=self.player.inventory)
-                    self.player_turn_results.extend(interact_results)
-
-
-                self.game_state = GameStates.ENEMY_TURN
+                # Attempt to talk to Prisoner on Other Side of Jail Cell Wall
+                # if not self.player.faction.check_enemy(target.faction.faction_name):
+                #     self.dialogue(target)
 
     def wait(self):
         # Player Character Does Nothing for a Turn
         self.fov_recompute = True
         self.game_state = GameStates.ENEMY_TURN
 
+        # Check Tiles Around for Wait Function
+        tiles_to_check = [(self.player.position.x + 1, self.player.position.y), (self.player.position.x - 1, self.player.position.y),
+                          (self.player.position.x, self.player.position.y + 1), (self.player.position.x, self.player.position.y - 1)]
+
+        for map_object_entity in self.game_map.map_objects:
+            if (map_object_entity.position.x, map_object_entity.position.y) in tiles_to_check:
+                # "Wait" Interaction with Map Object Entity
+                wait_results = self.player.fighter.interact(map_object_entity, interact_type='wait',
+                                                            target_inventory=self.player.inventory,
+                                                            entities=self.entities, reveal_all=self.reveal_all,
+                                                            game_map=self.game_map, player=self.player)
+                self.player_turn_results.extend(wait_results)
+                self.game_state = GameStates.ENEMY_TURN
+
+    def dialogue(self, entity=None):
+        if entity:
+
+            if entity.dialogue:
+
+                self.previous_game_state = self.game_state
+                self.game_state = GameStates.DIALOGUE
+                self.entity_dialogue = entity
+                dialogue = entity.dialogue.initiate_dialogue()
+                if dialogue:
+                    self.total_dialogue = collections.deque(dialogue.split(' '))
+                    self.dialogue_line_count = 4 + ceil(len(dialogue) / (self.dialogue_pane_width - 2))
+                else:
+                    self.total_dialogue = []
+
+                if not self.total_dialogue:
+                    self.game_state = GameStates.PLAYER_TURN
+                    self.current_dialogue = ''
+                    self.dialogue_line_count = 0
+            else:
+                self.player_turn_results.extend(
+                    [{'message': Message('You bump into a friendly {}.'.format(entity.name))}])
+
+        elif self.entity_dialogue:
+            dialogue = self.entity_dialogue.dialogue.continue_dialogue()
+            self.current_dialogue = ''
+            if dialogue:
+                self.total_dialogue = collections.deque(dialogue.split(' '))
+                self.dialogue_line_count = 4 + ceil(len(dialogue) / (self.dialogue_pane_width - 2))
+            else:
+                self.total_dialogue = []
+
+            if not self.total_dialogue:
+                self.game_state = GameStates.PLAYER_TURN
+                self.current_dialogue = ''
+                self.dialogue_line_count = 0
+        else:
+            self.player_turn_results.extend([{'message': Message('You bump into a friendly {}.'.format(entity.name))}])
+
+    def change_faction(self, entity, new_faction_name):
+        entity.faction.faction_name = new_faction_name
+
     def pickup(self):
         # Player is Attempting to Pick Up Item
         # Loop through each entity, check if same tile as player and is an item
+
         for entity in self.entities:
-            if entity.item and entity.x == self.player.x and entity.y == self.player.y:
+            if entity.position.x == self.player.position.x and entity.position.y == self.player.position.y and entity.item:
                 pickup_results = self.player.inventory.add_item(entity)
                 self.player_turn_results.extend(pickup_results)
                 break
         else:
-            self.message_log.add_message(Message('There is nothing here to pick up.', tcod.yellow))
+            self.player_turn_results.append({'message': Message('There is nothing here to pick up.', tcod.yellow)})
 
     def show_character_screen(self):
         # Toggle Character Screen
@@ -289,17 +407,15 @@ class Game(Controller):
 
     def take_stairs(self):
         # Player Found Goal and Advances to Next Level
-        # if self.game_state == GameStates.PLAYER_TURN:
-        for entity in self.entities:
-            if entity.stairs and entity.x == self.player.x and entity.y == self.player.y:
-                self.entities = self.game_map.next_floor(self.player, self.message_log, CONSTANTS)
+        # TODO: Incorporate "Stairs" as a Map Object Entity with Interact/Wait functions
+        for entity in self.game_map.map_objects:
+            if entity.stairs and entity.position.x == self.player.position.x and entity.position.y == self.player.position.y:
+                self.entities, self.particles, self.particle_systems = self.game_map.next_floor(self.player, self.message_log, CONSTANTS)
                 self.fov_map = initialize_fov(self.game_map)
                 self.enemy_fov_map = np.zeros(self.fov_map.transparent.shape, dtype=bool)
                 self.fov_recompute = True
-                # clear_console(root)
                 break
-        else:
-            self.message_log.add_message(Message('There are no stairs here.', tcod.yellow))
+        self.player_turn_results.append({'message': Message('There are no stairs here.', tcod.yellow)})
 
     def level_up(self, stat):
         # Player Levels Up
@@ -318,9 +434,10 @@ class Game(Controller):
         if self.previous_game_state != GameStates.PLAYER_DEAD and inventory_index < len(self.player.inventory.items):
             item = self.player.inventory.items[inventory_index]
             if self.game_state == GameStates.SHOW_INVENTORY:
-                self.player_turn_results.extend(self.player.inventory.use(item, entities=self.entities, fov_map=self.fov_map))
+                self.player_turn_results.extend(self.player.inventory.use(item, entities=self.entities, fov_map=self.fov_map, reveal_all=self.reveal_all, game_map=self.game_map))
+
             elif self.game_state == GameStates.DROP_INVENTORY:
-                self.player_turn_results.extend(self.player.inventory.drop_item(item))
+                self.player_turn_results.extend(self.player.inventory.drop_item(item, self.player))
 
     def targetting(self, mouse_click):
         # Handle Targeting for Ranged Attacks
@@ -328,7 +445,8 @@ class Game(Controller):
             target_x = self.mouse_pos[0]
             target_y = self.mouse_pos[1]
             item_use_results = self.player.inventory.use(self.targeting_item, entities=self.entities,
-                                                         fov_map=self.fov_map, target_x=target_x, target_y=target_y)
+                                                         game_map=self.game_map,  fov_map=self.fov_map,
+                                                         target_x=target_x, target_y=target_y, reveal_all=self.reveal_all)
             self.player_turn_results.extend(item_use_results)
 
         elif mouse_click.button == tcod.event.BUTTON_RIGHT:
@@ -344,34 +462,125 @@ class Game(Controller):
         else:
             self.exit_current_game('title')
 
+    def spawn_particle(self, particle_request):
+        # print('\nspawn particle:', particle_request)
+
+        p_index, p_x, p_y, particle_system = particle_request
+
+        p_stats = PARTICLES.get(p_index)
+        p_name = p_stats.get("name")
+        p_lifetime = p_stats.get("lifetime")
+        p_char = p_stats.get("char")
+        p_fg = p_stats.get("fg")
+        p_bg = p_stats.get("bg")
+        p_propagate = p_stats.get("propagate", False)
+        p_propagate_property = p_stats.get("propagate_property", None)
+        p_forever = p_stats.get("forever", False)
+
+        # if particle_system:
+        #     print('\tparticle_system:')
+        #     print(particle_system.particle_list, particle_system.coordinates)
+
+        if not particle_system:
+            particle_system = ParticleSystem()
+            # print('Creating new particle there are %s particles and %s coordinates:' % (
+            #     len(particle_system.particle_list), len(particle_system.coordinates)))
+
+        if particle_system not in self.particle_systems:
+            # print('\nnew particle system there are %s particles and %s coordinates:' % (
+            #     len(particle_system.particle_list), len(particle_system.coordinates)))
+            self.particle_systems.append(particle_system)
+
+        position_component = Position(x=p_x, y=p_y)
+        particle_component = Particle(lifetime=p_lifetime, char=p_char, fg=p_fg, bg=p_bg, forever=p_forever,
+                                      propagate=p_propagate, propagate_property=p_propagate_property,
+                                      particle_system=particle_system)
+        particle_entity = Entity(char=p_char, color=p_fg, name=p_name, json_index=p_index, position=position_component,
+                                 particle=particle_component, render_order=RenderOrder.PARTICLE)
+        particle_system.particle_list.append(particle_component)
+        particle_system.coordinates.append((p_x, p_y))
+        self.particles.append(particle_entity)
+
+    def propagate_particle(self, particle_dict):
+        # print('\npropagate_particle', particle_dict)
+        for particle, val_list in particle_dict.items():
+            # print(val_list[0])
+            if val_list[0]:
+                center_x, center_y = particle.owner.position.x, particle.owner.position.y
+                directions = [(center_x - 1, center_y),
+                              (center_x + 1, center_y),
+                              (center_x, center_y + 1),
+                              (center_x, center_y - 1)]
+
+                # Propagate in all (4) Cardinal Directions
+                # print('# Propagate in all (4) Cardinal Directions')
+                for dx, dy in directions:
+
+                    # Check if Particle System Doesn't Already Have a Particle at Location
+                    # print('# Check if Particle System Doesn\'t Already Have a Particle at Location')
+                    particle_system = particle.particle_system
+                    # if particle_system:
+                    if (dx, dy) in particle_system.coordinates:
+                        continue
+
+                    tile = self.game_map.tileset_tiles[dy][dx]
+                    tile_stats = TILE_SET.get("{}".format(tile))
+                    tile_property = tile_stats.get('properties')
+                    # tile_name = tile_stats.get('name')
+                    if [val_list[1]] == tile_property:
+                        # print('spawning fire particle at (%s, %s)' % (dx, dy))
+                        # print('tile:', tile_name)
+                        # print('tile_property:', tile_property)
+
+                        if val_list[1] == 'flammable':
+
+                            # Check if Entity Exists on tile
+                            for entity in self.entities:
+                                if entity.position and entity.fighter:
+                                    if (entity.position.x, entity.position.y) == (dx, dy):
+                                        entity.fighter.take_damage(25)
+                                        break
+
+                            self.spawn_particle(('fire', dx, dy, particle_system))
+
+                            map_object = self.game_map.obtain_map_objects(dx, dy)
+
+                            new_tile = 4
+                            if map_object:
+                                if map_object.inventory:
+                                    for item in map_object.inventory.items:
+                                        self.entities.append(item)
+
+                                    map_object.inventory.drop_all_items()
+
+                                self.change_map_object([map_object, new_tile])
+                            else:
+                                new_tile_stats = TILE_SET.get('{}'.format(new_tile))
+                                self.game_map.tileset_tiles[dy][dx] = new_tile
+                                self.game_map.tile_cost[dy][dx] = new_tile_stats.get("tile_cost")
+                                self.game_map.walkable[dy][dx] = new_tile_stats.get("walkable")
+                                self.game_map.transparent[dy][dx] = new_tile_stats.get("transparent")
+                                self.fov_map.transparent[dy][dx] = new_tile_stats.get("fov")
+                                self.enemy_fov_map[dy][dx] = new_tile_stats.get("fov")
+
+                        elif val_list[1] == 'conductor':
+                            for entity in self.entities:
+                                if entity.position and entity.fighter:
+                                    if (entity.position.x, entity.position.y) == (dx, dy):
+                                        entity.fighter.take_damage(40)
+                                        break
+                            self.spawn_particle(('lightning', dx, dy, particle_system))
+
+
     @staticmethod
     def toggle_full_screen():
-        pass
         # print('TODO: actually toggle full screen or not ...')
-
-    # PLAYER_TURN_RESULTS = {
-    #     'message': Game.display_message,
-    #     'item_added': Game.item_added,
-    #     'consumed': Game.item_consumed,
-    #     'reuseable': Game.item_reuseable,
-    #     'item_dropped': Game.item_dropped,
-    #     'equip:': Game.equip,
-    #     'targeting': Game.targetting,
-    #     'map': Game.map,
-    #     'targeting_cancelled': Game.targeting_cancelled,
-    #     'xp': Game.xp,
-    #     'chest': Game.chest
-    # }
+        pass
 
     def display_message(self, game_message):
         self.message_log.add_message(game_message)
 
     def item_added(self, item_added):
-        """
-
-        :param item_added: Entity.Entity
-        :return:
-        """
         # TODO: Deal with removing items that are not entities, not ValueError handling
         try:
             self.entities.remove(item_added)  # how to deal with items from chest that are not entities
@@ -381,9 +590,11 @@ class Game(Controller):
         self.game_state = GameStates.ENEMY_TURN
 
     def item_consumed(self, *args):
+        self.reset_mouse_targets()
         self.game_state = GameStates.ENEMY_TURN
 
     def item_reuseable(self, *args):
+        self.reset_mouse_targets()
         self.game_state = GameStates.ENEMY_TURN
 
     def item_dropped(self, item):
@@ -406,15 +617,22 @@ class Game(Controller):
         self.game_state = GameStates.ENEMY_TURN
 
     def activate_targeting_mode(self, targeting):
+        # print('activate_targeting_mode', targeting)
+        # print('range:', targeting.item.function_kwargs.get('maximum_range'))
         # Activate Targeting Game State to User to Mouse Select
+        self.mouse_target_type = targeting.item.function_kwargs.get('targeting_type')
+        self.mouse_target_range = targeting.item.function_kwargs.get('maximum_range')
         self.previous_game_state = GameStates.PLAYER_TURN
         self.game_state = GameStates.TARGETING
         self.targeting_item = targeting
         self.display_message(self.targeting_item.item.targeting_message)
+        if self.mouse_pos:
+            self.set_mouse_pos(self.mouse_pos[0] + 1, self.mouse_pos[1] + 1)
 
     def deactivate_targeting_mode(self, *args):
         self.game_state = self.previous_game_state
         self.display_message(Message('Targeting cancelled.'))
+        self.reset_mouse_targets()
 
     def activate_map(self, *args):
         # Allow Document to Read On Screen
@@ -422,30 +640,70 @@ class Game(Controller):
         self.previous_game_state = GameStates.PLAYER_TURN
         self.game_state = GameStates.READ
 
-    def obtain_xp(self, xp):
-        leveled_up = self.player.level.add_xp(xp)
-        self.display_message(Message('You gained %s experience points.' % xp))
+    def obtain_xp(self, xp_args):
+        # Only Allow Player to Receive XP
+        xp = xp_args[0]
+        entity = xp_args[1]
+        # TODO: Separate XP component from Fighter Component
+        if entity == self.player:
+            leveled_up = self.player.level.add_xp(xp)
+            self.display_message(Message('You gained %s experience points.' % xp))
 
-        if leveled_up:
-            self.display_message(Message('Your battle skills grow stronger! You reached level %s!' %
-                                         self.player.level.current_level, tcod.yellow))
-            self.previous_game_state = self.game_state
-            self.game_state = GameStates.LEVEL_UP
+            if leveled_up:
+                self.display_message(Message('Your battle skills grow stronger! You reached level %s!' %
+                                             self.player.level.current_level, tcod.yellow))
+                self.previous_game_state = self.game_state
+                self.game_state = GameStates.LEVEL_UP
 
-    def dead_entity(self, dead_entity):
-        if dead_entity == self.player:
-            message, self.game_state = kill_player(dead_entity)
+    def dead_entity(self, entity):
+        if entity == self.player:
+            message, self.game_state = kill_player(entity)
         else:
-            message = kill_monster(dead_entity)
-        self.display_message(message)
-            # self.message_log.add_message(message)
+            # Remove Encounter or Reference to Encounter
+            entity.ai.remove_encounter()
 
-    def chest_interact(self, chest):
-        if chest:
-            if chest.inventory.empty:
-                # Change from Close Chest to Open Chest
-                self.game_map.tileset_tiles[chest.y][chest.x] = 9
-                chest.change_map_object(self.game_map.tile_set.get("9"), 9)
+            message = kill_mob(entity)
+
+            # Drop All Items on Floor
+            if entity.inventory:
+                # message = Message('You see {} drop items is dead!'.format(entity.name.capitalize()), tcod.orange)
+                items_to_drop = copy(entity.inventory.items)
+
+                for item_entity in items_to_drop:
+                    entity.inventory.drop_item(item_entity, entity)
+                    self.entities.append(item_entity)
+
+            self.game_map.walkable[entity.position.y][entity.position.x] = True
+            self.game_map.transparent[entity.position.y][entity.position.x] = True
+            self.game_map.tile_cost[entity.position.y][entity.position.x] = self.game_map.tile_set.get(
+                "%s" % self.game_map.tileset_tiles[entity.position.y][entity.position.x]).get('tile_cost')
+
+        # Display Message if Within Player FOV
+        if self.fov_map.fov[entity.position.y][entity.position.x]:
+            self.display_message(message)
+
+    def change_map_object(self, map_object_entity_args):
+        map_object_entity = map_object_entity_args[0]
+        new_json_index = map_object_entity_args[1]
+
+        y, x = map_object_entity.position.y, map_object_entity.position.x
+
+        # Change Map Object Entity
+        map_object_entity.change_entity(self.game_map.tile_set.get("%s" % new_json_index), new_json_index)
+
+        # Update Game Map
+        self.game_map.tileset_tiles[y][x] = new_json_index
+        tile_stats = TILE_SET.get('%s' % new_json_index)
+        self.game_map.tile_cost[y][x] = tile_stats.get("tile_cost")
+        self.game_map.walkable[y][x] = tile_stats.get("walkable")
+        self.game_map.transparent[y][x] = tile_stats.get("transparent")
+        self.fov_map.transparent[y][x] = tile_stats.get("fov")
+        self.enemy_fov_map[y][x] = tile_stats.get("fov")
+        self.game_state = GameStates.ENEMY_TURN
+
+    def temporary_vision(self, door_entity):
+        self.game_map.temporary_vision.append((door_entity.position.x, door_entity.position.y))
+        self.fov_recompute = True
         self.game_state = GameStates.ENEMY_TURN
 
     def toggle_god_mode(self):
@@ -487,7 +745,7 @@ class Game(Controller):
             Message('%s XP given to player.' % self.player.level.experience_needed_to_next_level, tcod.white))
 
         # player.level.current_xp = player.level.experience_to_next_level
-        self.player_turn_results.append({'xp': self.player.level.experience_needed_to_next_level})
+        self.player_turn_results.append({'xp': [self.player, self.player.level.experience_needed_to_next_level]})
 
         if self.previous_game_state == GameStates.PLAYER_DEAD:
             self.game_state = self.previous_game_state
@@ -496,11 +754,10 @@ class Game(Controller):
 
     def go_to_next_level(self):
         # Debug Go to Next Level
-        self.entities = self.game_map.next_floor(self.player, self.message_log, CONSTANTS)
+        self.entities, self.particles, self.particle_systems = self.game_map.next_floor(self.player, self.message_log, CONSTANTS)
         self.fov_map = initialize_fov(self.game_map)
         self.fov_recompute = True
         self.game_state = GameStates.PLAYER_TURN
-        # clear_console(root)
         self.revive_player()
 
     def change_font_size(self, font_size):
@@ -518,23 +775,19 @@ class Game(Controller):
         # Debug Revive Player
         if self.player.fighter.hp == 0:
             self.message_log.add_message(Message('Player is revived!', tcod.white))
-            self.player.char = '@'
-            self.player.color = tcod.white
+            self.player.char = 64
+            self.player.color = [191, 171, 143]
             self.player.fighter.hp = self.player.fighter.max_hp
             self.game_state = GameStates.PLAYER_TURN
         elif self.game_state == GameStates.DEBUG_MENU:
             self.game_state = GameStates.PLAYER_TURN
 
-
     def ev_mousebuttonup(self, event: tcod.event.MouseButtonUp):
-        print(event.tile)
         if self.game_state == GameStates.TARGETING:
             self.targetting(event)
 
-
     def ev_mousemotion(self, event: tcod.event.MouseMotion):
         self.set_mouse_pos(event.tile.x, event.tile.y)
-
 
     def set_mouse_pos(self, x, y):
         view_x_start, view_x_end, view_y_start, view_y_end = obtain_viewport_dimensions(self.game_map,
@@ -546,27 +799,68 @@ class Game(Controller):
 
         if 0 < x < CONSTANTS['viewport_width'] * 2 - 1 and \
                 0 < y < CONSTANTS['viewport_height'] * 2 - 1:
-            self.mouse_pos = (view_x_start + x + viewport_width_start,
-                              view_y_start + y + viewport_height_start)
+            self.mouse_targets = []
+
+            mouse_x = self.clamp(view_x_start + x + viewport_width_start, 0, self.game_map.width - 1)
+            mouse_y = self.clamp(view_y_start + y + viewport_height_start, 0, self.game_map.height - 1)
+            if self.mouse_target_type == 'area':
+                radius = self.mouse_target_range // 2
+                for dx in range(mouse_x - radius, mouse_x + radius + 1):
+                    for dy in range(mouse_y - radius, mouse_y + radius + 1):
+
+                        radius_x = mouse_x - dx
+                        radius_y = mouse_y - dy
+
+                        distance_squared = radius_x * radius_x + radius_y * radius_y
+
+                        if distance_squared <= radius * radius:
+                        # if self.game_map.tile_cost[dy][dx] != 0 and distance_squared <= radius * radius:
+                            self.mouse_targets.append((dx, dy))
+
+            elif self.mouse_target_type == 'path':
+                self.mouse_targets = self.player.position.move_astar(mouse_x, mouse_y, self.game_map, diagonal_cost=1.00)
+
+            self.mouse_targets.append((mouse_x, mouse_y))
+            self.mouse_pos = (mouse_x, mouse_y)
             self.normal_mouse_pos = (x, y)
         else:
             self.normal_mouse_pos = None
             self.mouse_pos = None
+            self.mouse_targets = []
+
+    @staticmethod
+    def clamp(num, min_value, max_value):
+        return max(min(num, max_value), min_value)
 
     def update_mouse_pos(self, dx, dy):
         if self.mouse_pos:
             new_x, new_y = self.mouse_pos
-            if CONSTANTS['viewport_width'] < self.player.x < CONSTANTS['map_width'] - CONSTANTS['viewport_width']:
+            if CONSTANTS['viewport_width'] < self.player.position.x + dx < CONSTANTS['map_width'] - CONSTANTS['viewport_width']:
                 new_x += dx
 
-            if CONSTANTS['viewport_height'] < self.player.y < CONSTANTS['map_height'] - CONSTANTS['viewport_height']:
+            if CONSTANTS['viewport_height'] < self.player.position.y + dy < CONSTANTS['map_height'] - CONSTANTS['viewport_height']:
                 new_y += dy
+
+            # Clamp Values
+            new_x = self.clamp(new_x, 0, self.game_map.width - 1)
+            new_y = self.clamp(new_y, 0, self.game_map.height - 1)
+
+
+            # if self.game_map.width >= new_x:
+            #     new_x = self.game_map.width
+            # elif new_x < 0:
+            #     new_x = 0
+            #
+            # if self.game_map.height >= new_y:
+            #     new_y = self.game_map.height
+            # elif new_y < 0:
+            #     new_y = 0
 
             self.mouse_pos = new_x, new_y
 
     def initialize_game(self, level):
         # Initialize Game Variables
-        self.player, self.entities, self.game_map, self.message_log, self.game_state = get_game_variables(CONSTANTS,
+        self.player, self.entities, self.particles, self.particle_systems, self.game_map, self.message_log, self.game_state = get_game_variables(CONSTANTS,
                                                                                                           level=level)
         self.panel = tcod.console.Console(CONSTANTS['screen_width'], CONSTANTS['panel_height'])
         self.top_panel = tcod.console.Console(CONSTANTS['screen_width'], CONSTANTS['top_gui_height'])
@@ -587,7 +881,7 @@ class Game(Controller):
         self.enemy_fov_map = np.zeros(self.fov_map.transparent.shape, dtype=bool)
 
     def on_draw(self):
-        global ROOT_CONSOLE, PLAYER_TURN_RESULTS
+        global ROOT_CONSOLE, TURN_RESULTS
         # """
         #  !"#$&'()*+,-./0123456789:;<=>?
         #  @[\]^_'{|}~░▒▓│—┼┤┴├┬└╥┘▀▄
@@ -614,7 +908,7 @@ class Game(Controller):
         #     tcod.console_put_char(root, x, 1, c, tcod.BKGND_NONE)
         #
         # """
-        #              ○  ◙  ►  ◄   ↕   ↑    ↓   →   ←  ↔   ▲  ▼   !   "   #   $   y   &   '   (   )   *   +   ,   -   .
+        #              ○  ◙  ►  ◄   ↕   ↑    ↓   →   ←  ↔   ▲  ▼   !   "   #   $   y   %   '   (   )   *   +   ,   -   .
         # """
         # char_list = [9, 10, 16, 17, 18, 24, 25, 26, 27, 29, 30, 31, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46]
         # """
@@ -627,15 +921,19 @@ class Game(Controller):
         # """
         # char_list = [65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76]
         # """
-        #              d    e    f    g    h    i    j    k    l    m    n    o    p    q    r    s    t
+        #              d    e    f    g    h    i    j    k    l    m    n    o    p    q    r    s    t    z
         # """
-        # char_list = [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116]
+        # char_list = [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 122]
+        #
+        # """
+        #              {    |    }    ~    ⌂    Ç    ü    é    â    ä    à    å    ç    ê    ë    R    ï    î    ì
+        # char_list = [123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141]
         #
         # """
         #                   ░    ▒    ▓    │    ┤    ╣    ║    ╗    ╝    ╜    ≈    └    ╔    ┬    ╣    ─    ┼
         # """
         # char_list.extend([176, 177, 178, 179, 180, 185, 186, 187, 188, 189, 191, 192, 193, 194, 195, 196, 197])
-        #
+        #║
         # """
         #                   ╚    ╤    ╩    ╦    ╠    ═    ╬    ┘    ┌    open clo
         #                                                                box  box
@@ -671,15 +969,13 @@ class Game(Controller):
         #     14 => { 203 } // Wall to the east, west, and north      ╦
         # """
         # return
-        # FOV Update
 
         # Log Events that Occured During Player Turn
         # Analyze Actions User Results and Propagate Resulting Events
         for player_turn_result_dict in self.player_turn_results:
             for result_key, result_val in player_turn_result_dict.items():
-                result_event = PLAYER_TURN_RESULTS.get(result_key, no_key_action)
+                result_event = TURN_RESULTS.get(result_key, no_key_action)
                 result_event(self, result_val)  # pass dict.values()
-
         self.player_turn_results = []
 
         # Enemy Turn to Act
@@ -690,50 +986,71 @@ class Game(Controller):
 
                     # Pick Closest Enemy Entity and Attack
                     # Note: This doesn't take into account, if obstacles block FOV to see entity as all entities are
-                    #       sharing the same FOV map.
+                    #       sharing the same FOV map. Entities will be able to target through walls if ally target on
+                    #       other side has that entity in its FOV.
 
                     # Check if Current Target is Dead
                     if entity.ai.current_target:
-                        if not entity.ai.current_target.fighter:
-                            entity.ai.current_target = None
+                        # if hasattr(entity.ai.current_target, "fighter"):
+                        if hasattr(entity.ai.current_target, "render_order"):
+                            if entity.ai.current_target.render_order == RenderOrder.CORPSE:
+                                entity.ai.current_target = None
 
-                    if not entity.ai.current_target:
-                        close_entities = {}
-                        for other_entity in self.entities:
-                            if other_entity.ai or other_entity is self.player:  # Check if AI
+                    # If Entity doesn't have a Current Target
+                    # TODO: Condense this disgusting IF structure:
+                    #       1. Check if no current target
+                    #       2. AI exist or is Player
+                    #       3. Within Distance
+                    #       4. Within FOV
+                    #       5. Add Target and Dist Val to Dictionary
+                    #       6. Pick min distance value
+                    # if not entity.ai.current_target:
+                    close_entities = {}
+                    for other_entity in self.entities:
 
-                                distance = entity.distance_to(other_entity.x, other_entity.y)
-                                if distance < entity.fighter.fov:  # Check within FOV distance
-                                    if entity.faction.check_enemy(other_entity.faction.faction_name):
+                        # Check if AI
+                        if other_entity.ai or other_entity is self.player:
 
-                                        close_entities[distance] = other_entity
+                            # Check if Enemy Faction
+                            if entity.faction.check_enemy(other_entity.faction.faction_name):
 
-                        if close_entities:
-                            entity.ai.current_target = close_entities[min(close_entities.keys())]
-                        else:
-                            entity.ai.path = []
-                            entity.ai.current_target = None
+                                # Check within Distance and Entity's FOV
+                                distance = int(entity.position.distance_to(other_entity.position.x, other_entity.position.y)) + 1
+                                if distance <= entity.fighter.fov_range and \
+                                        entity.fighter.curr_fov_map[other_entity.position.y][other_entity.position.x]:
+                                        # self.enemy_fov_map[other_entity.position.y][other_entity.position.x]:
 
-                    enemy_turn_results = entity.ai.take_turn(self.enemy_fov_map, self.game_map, self.entities)
+                                    # Add Target to Dict of Possible Targets by Distance
+                                    close_entities[distance] = other_entity
 
-                    for enemy_turn_result in enemy_turn_results:
-                        message = enemy_turn_result.get('message')
-                        dead_entity = enemy_turn_result.get('dead')
+                    # close_entities = {int(entity.position.distance_to(other_entity.position.x, other_entity.position.y)) + 1:other_entity for other_entity in self.entities \
+                    #                   if (other_entity.ai or other_entity is self.player) and }
 
-                        if message:
-                            self.message_log.add_message(message)
+                    # If Possible Targets, Finally Select The Closest Target
+                    if close_entities:
+                        min_distance = min(close_entities.keys())
+                        entity_target = close_entities[min_distance]
+                        entity.ai.target_not_within_fov_max = min_distance + min_distance
+                        entity.ai.current_target = entity_target
+                        entity.ai.encounter.target_list.add(entity_target)
 
-                        # Check if Target Dead or Monster Dead
-                        if dead_entity:
-                            if dead_entity == self.player:
-                                message, self.game_state = kill_player(dead_entity)
+                    enemy_turn_results = entity.ai.take_turn(entity.fighter.curr_fov_map, self.game_map, self.entities)
+                    # enemy_turn_results = entity.ai.take_turn(self.enemy_fov_map, self.game_map, self.entities)
+
+                    # Activate Actions/Events from Enemy Turn
+                    for enemy_turn_result_dict in enemy_turn_results:
+
+                        for result_key, result_val in enemy_turn_result_dict.items():
+
+                            # Don't Dislay Messages if Entity not Within Player FOV
+                            # TODO: FOV should depend on action position, not the entity position itself.
+                            if result_key == 'message':
+                                if self.fov_map.fov[entity.position.y][entity.position.x]:
+                                    result_event = TURN_RESULTS.get(result_key, no_key_action)
+                                    result_event(self, result_val)  # pass dict.values()
                             else:
-                                print('%s has perished!' % dead_entity.name)
-                                message = kill_monster(dead_entity)
-                                self.game_map.walkable[dead_entity.y][dead_entity.x] = True
-                                self.game_map.transparent[dead_entity.y][dead_entity.x] = True
-
-                            self.message_log.add_message(message)
+                                result_event = TURN_RESULTS.get(result_key, no_key_action)
+                                result_event(self, result_val)  # pass dict.values()
 
                     # Check if Player is Dead as a Result
                     if self.game_state == GameStates.PLAYER_DEAD:
@@ -741,13 +1058,67 @@ class Game(Controller):
             else:
                 self.game_state = GameStates.PLAYER_TURN
 
+            # Iterate through Encounters
+            for e in self.game_map.encounters:
+                e.unite()
+
+            # Update Turn Count
+            self.game_map.turn_count += 1
+
+        # Update Particles Life Time Counter
+        particle_results = []
+        for p in self.particles:
+            # p.particle.lifetime -= 1
+            particle_results.append(p.particle.update(1))
+            # print('{} lifetime: {}'.format(p.name, p.particle.lifetime))
+
+        for result in particle_results:
+            self.propagate_particle(result)
+
+        # Remove Particles Past their lifetime
+        self.particles = [p for p in self.particles if p.particle.lifetime > 0]
+
+        # if self.particle_systems:
+        #     print('\nparticle systems:')
+        #     for p_sys in self.particle_systems:
+        #         print("{} particles".format(len(p_sys.particle_list)), ', '.join([p.owner.name for p in p_sys.particle_list]))
+
+        # Remove Particle Systems if No Particles
+        self.particle_systems = [p_sys for p_sys in self.particle_systems if len(p_sys.particle_list) > 0]
+
+        # Check for Game Events Activations
+        # print('# Check for Game Events Activations: {} remaining'.format('1 event' if len(self.game_map.game_events) == 1 else '%s events' % len(self.game_map.game_events)))
+        for game_event in self.game_map.game_events:
+
+            if game_event.check_conditions():
+                print('\n', game_event)
+                game_event_results = game_event.activate_event(self.entities, self.particles)
+
+                for game_event_result_dict in game_event_results:
+
+                    for result_key, result_val in game_event_result_dict.items():
+                        result_event = TURN_RESULTS.get(result_key, no_key_action)
+                        result_event(self, result_val)  # pass dict.values()
+
+        self.game_map.game_events = [g for g in self.game_map.game_events if not g.check_conditions()]
+
+
         # TODO: Does the game need to be saved every turn?
         # save_game(player, entities, game_map, message_log, game_state)    
 
         if self.fov_recompute:
             # Update FOV for Player
-            recompute_fov(self.fov_map, self.player.x, self.player.y, self.player.fighter.fov, self.game_map.entrances,
+            recompute_fov(self.fov_map, self.player.position.x, self.player.position.y, self.player.fighter.fov_range, self.game_map.temporary_vision,
                           CONSTANTS['fov_light_walls'], CONSTANTS['fov_algorithm'])
+
+            # Remove Temporary Vision for Next Turn
+            for x, y in self.game_map.temporary_vision:
+                # print(self.game_map.tileset_tiles[y][x])
+                # print(TILE_SET.get(self.game_map.tileset_tiles[y][x]))
+                fov_boolean = TILE_SET.get('%s' % self.game_map.tileset_tiles[y][x]).get('transparent')
+                self.fov_map.transparent[y][x] = fov_boolean
+                # print('updating vision to {} at ({}, {})'.format(fov_boolean, x, y))
+            self.game_map.temporary_vision = []
             
             # Update and Combine FOV for Entities
             self.enemy_fov_map = definite_enemy_fov(self.game_map, self.fov_map, self.game_map.entrances, self.entities,
@@ -769,62 +1140,80 @@ class Game(Controller):
         # viewport_height_start = (((screen_height // 2) - (viewport_height // 2)) // -2) + 5
 
         # Background, Tiles, Etc.
-        render_viewport(self.event_panel, self.mouse_pos, self.game_map, self.entities, self.fov_map, self.enemy_fov_map,
+        render_viewport(self.event_panel, self.mouse_pos, self.mouse_targets, self.game_map, self.entities, self.fov_map, self.enemy_fov_map,
                         self.fov_recompute, self.reveal_all, view_x_start, view_x_end, view_y_start, view_y_end,
                         viewport_width_start, viewport_height_start)
 
-        # Sort Draw Order to Sort by Render Order Enum Value
+        # Sort Draw Order to Sort by Render Order Enum Value and if Within Screen,
         entities_under_mouse = []
+        # _entities_in_render_order = [entity for entity in self.entities + self.particles if entity.position]
         entities_in_render_order = sorted(
-            [entity for entity in self.entities if view_x_start <= entity.x < view_x_end and view_y_start <= entity.y < view_y_end],
+            [entity for entity in self.entities + self.particles if view_x_start <= entity.position.x < view_x_end and view_y_start <= entity.position.y < view_y_end and entity.position],
             key=lambda x: x.render_order.value
         )
         # Draw all entities in the list
         for entity in entities_in_render_order:
-            # if :
+            # if :g
 
             # Find Entity Under Mouse since we're looping :D
             if self.mouse_pos:
-                # if entity.x == view_x_start + self.mouse_pos[0] + viewport_width_start and \
-                #         entity.y == view_y_start + self.mouse_pos[1] + viewport_height_start and \
+                # if entity.position.x == view_x_start + self.mouse_pos[0] + viewport_width_start and \
+                #         entity.position.y == view_y_start + self.mouse_pos[1] + viewport_height_start and \
                 #         self.fov_map.fov[view_y_start + self.mouse_pos[1] + viewport_height_start][view_x_start + self.mouse_pos[0] + viewport_width_start]:
-                if entity.x == self.mouse_pos[0] and entity.y == self.mouse_pos[1] and \
-                        self.fov_map.fov[self.mouse_pos[1]][self.mouse_pos[0]]:
+                if entity.position.x == self.mouse_pos[0] and entity.position.y == self.mouse_pos[1] and \
+                        self.fov_map.fov[self.mouse_pos[1]][self.mouse_pos[0]] and not entity.particle:
                     entities_under_mouse.append(entity)
 
-            draw_entity(self.event_panel, entity, self.fov_map, self.game_map, self.reveal_all, view_x_start, view_x_end,
-                        view_y_start, view_y_end, viewport_width_start, viewport_height_start)
+            if entity.particle:
+                draw_particle_entity(self.event_panel, entity, self.fov_map, self.reveal_all, view_x_start,
+                                     view_y_start, viewport_width_start, viewport_height_start)
+            else:
+                draw_entity(self.event_panel, entity, self.fov_map, self.game_map, self.reveal_all, view_x_start, view_x_end,
+                            view_y_start, view_y_end, viewport_width_start, viewport_height_start)
 
         # Create Frame around near pos
         info = ''
         line_count = 0
+        info_pane_width = 16
         for entity in entities_under_mouse:
-            if entity.fighter:
-                info += '\n\n%s\n\nLv: %s\nHP: %s\nStr: %s\nDef: %s' % (entity.name, entity.fighter.mob_level, entity.fighter.hp, entity.fighter.power, entity.fighter.defense)
-                line_count += 8
+
+            # info += '\n\n%s' % entity.name
+            # line_count += 3
+            if entity.render_order == RenderOrder.CORPSE:
+                info += '\n\n{}'.format(entity.name)
+                line_count += 3 + ceil(len(entity.name) / info_pane_width - 2)
+
+            elif entity.fighter:
+                info += '\n\n%s\nLv: %s\nHP: %s\nStr: %s\nDef: %s' % (entity.name, entity.fighter.mob_level, entity.fighter.hp, entity.fighter.power, entity.fighter.defense)
+                line_count += 6 + ceil(len(entity.name) / (info_pane_width - 2))
 
             elif entity.equippable:
                 info += '\n\n%s\n\n%s\n\n+HP: %s\n+STR: %s\nDEF: %s' % (entity.name, entity.equippable.description,
                                                 entity.equippable.max_hp_bonus,
                                                 entity.equippable.power_bonus,
                                                 entity.equippable.defense_bonus)
-                line_count += 18
+                line_count += 5 + ceil(len(entity.equippable.description) / info_pane_width + len(entity.name) / info_pane_width)
+
             elif entity.item:
                 info += '\n\n%s\n\n%s' % (entity.name, entity.item.description)
-                line_count += 18
+                line_count += 4 + ceil(len(entity.item.description) / info_pane_width)
 
         if entities_under_mouse:
-            info_pane_width = 16
-
             # Check left or right
             frame_x = self.normal_mouse_pos[0] + 1  # display right
             if self.normal_mouse_pos[0] >= CONSTANTS.get('viewport_width'):
                 frame_x = self.normal_mouse_pos[0] - info_pane_width  # display left
+                if frame_x < 1:
+                    frame_x = 1
 
             # Check top or bottom
             frame_y = self.normal_mouse_pos[1]
             if self.normal_mouse_pos[1] > CONSTANTS.get('viewport_height'):
                 frame_y = self.normal_mouse_pos[1] + 1 - line_count
+
+                if frame_y < 1:
+                    frame_y = 1
+
             popup_panel = tcod.console.Console(info_pane_width, line_count+1)
 
             popup_panel.draw_frame(x=0, y=0, width=info_pane_width, height=line_count+1, title='', fg=tcod.light_gray,
@@ -836,33 +1225,44 @@ class Game(Controller):
             popup_panel.blit(dest=self.event_panel, dest_x=frame_x, dest_y=frame_y, src_x=0, src_y=0,
                                   width=info_pane_width, height=line_count+1)
 
-        # # Mouse Over Display
-        # mouse_info = get_info_under_mouse(self.mouse_pos, self.game_map, self.entities, self.game_map.map_objects,
-        #                                   self.fov_map, self.reveal_all, view_x_start, view_x_end, view_y_start,
-        #                                   view_y_end, CONSTANTS['viewport_width'], CONSTANTS['viewport_height'],
-        #                                   viewport_width_start, viewport_height_start)
-        #
-        # self.side_panel.print(1, 1, mouse_info, fg=tcod.light_gray, bg_blend=tcod.BKGND_NONE, alignment=tcod.LEFT)
-
-
         # Frame
         self.event_panel.draw_frame(0, 0, self.event_panel.width, self.event_panel.height,
                                     title='%s Level: %s' % (self.game_map.level, self.game_map.dungeon_level),
                                     fg=tcod.white, bg=tcod.black, clear=False, bg_blend=tcod.BKGND_DEFAULT)
 
+        # Continue Dialogue Options
+        if self.game_state == GameStates.DIALOGUE:
+
+            # self.dialogue_panel.update()
+            # print(self.entity_dialogue.name, self.total_dialogue)
+            dialogue_name = self.entity_dialogue.name
+
+            if self.total_dialogue:
+                self.current_dialogue += self.total_dialogue.popleft() + ' '
+
+            # frame_x = (self.event_panel.width // 2) - pane_width // 2
+            # frame_y = (self.event_panel.height // 2) - pane_height // 2
+            frame_x = 2
+            frame_y = 2
+            self.dialogue_panel = tcod.console.Console(self.dialogue_pane_width, self.dialogue_line_count)
+            self.dialogue_panel.clear()
+
+            self.dialogue_panel.draw_frame(x=0, y=0, width=self.dialogue_pane_width, height=self.dialogue_line_count,
+                                           title='', fg=tcod.light_gray, bg=tcod.black, clear=True, bg_blend=tcod.BKGND_SCREEN)
+
+            self.dialogue_panel.print_box(x=1, y=1, width=self.dialogue_pane_width - 2,
+                                          height=self.dialogue_line_count,
+                                          string='{}\n\n{}'.format(dialogue_name, self.current_dialogue))
+
+            self.dialogue_panel.blit(dest=self.event_panel, dest_x=frame_x, dest_y=frame_y, src_x=0, src_y=0,
+                                     width=self.dialogue_pane_width, height=self.dialogue_line_count)
+            # self.end_dialogue()
+
         # Actual Game Screen
         self.event_panel.blit(dest=ROOT_CONSOLE, dest_x=0, dest_y=0, src_x=0, src_y=0,
                               width=self.event_panel.width, height=self.event_panel.height)
         # Draw Console to Screen
-
-
-        # tcod.console_blit(con, viewport_width_start, viewport_height_start, screen_width, screen_height, 0, 0, 0)
-        # print('\nCentering Viewport')
-        # print(screen_width // 2, viewport_width // 2, viewport_width_start)
-        # print(screen_height // 2, viewport_height // 2, viewport_height_start)
-
         # Player UI Panel
-        # clear_console(self.panel)
         self.panel.clear()
         self.panel.draw_frame(0, 0, CONSTANTS['screen_width'], CONSTANTS['panel_height'],
                               clear=False, bg_blend=tcod.BKGND_NONE)
@@ -896,23 +1296,30 @@ class Game(Controller):
         self.side_panel.print(1, 5, 'STR: %s\nDEF: %s' % (self.player.fighter.power, self.player.fighter.defense),
                               fg=tcod.light_gray, bg_blend=tcod.BKGND_NONE, alignment=tcod.LEFT)
 
+        # Display Turn Count
+        self.side_panel.print(1, 6, 'Current Turn: {}'.format(self.game_map.turn_count), fg=tcod.light_gray,
+                              bg_blend=tcod.BKGND_NONE, alignment=tcod.LEFT)
+
         # Terrain Under Mouse Display
         if self.mouse_pos:
             mouse_x, mouse_y = self.mouse_pos
+
+            # Tile Data
             tile = self.game_map.tileset_tiles[mouse_y][mouse_x]
             _tile = self.game_map.tile_set.get("%s" % tile)
             name = "%s\nCost: %s\n(%s, %s)" % (_tile.get("name"), self.game_map.tile_cost[mouse_y][mouse_x],
                                                    mouse_x, mouse_y)
-            # else:
-            #     name = "(%s, %s)" % (mouse_x, mouse_y)
-            self.side_panel.print(1, CONSTANTS['side_panel_height'] - 4, string=name, fg=tcod.light_gray,
+            # Room Type
+            for room in self.game_map.mouse_rooms:
+                # if room.check_point_within_room(mouse_x + view_x_start + viewport_width_start,
+                #                                 mouse_y + view_y_start + viewport_height_start):
+                if room.check_point_within_room(mouse_x, mouse_y):
+                    name += "\nRoom: %s" % room.room_type
+            self.side_panel.print(1, CONSTANTS['side_panel_height'] - 5, string=name, fg=tcod.light_gray,
                                   bg_blend=tcod.BKGND_NONE, alignment=tcod.LEFT)
 
         self.side_panel.blit(dest=ROOT_CONSOLE, dest_x=CONSTANTS['viewport_width'] * 2, dest_y=0, src_x=0, src_y=0,
                              width=CONSTANTS['side_panel_width'], height=CONSTANTS['side_panel_height'], )
-
-
-
 
        # Entity Display
         # # tcod.console_clear(top_panel)
@@ -1018,7 +1425,7 @@ SCREENS = {
 
 def change_screen(parameter):
     global current_screen
-    print('change_screen', parameter)
+
     if parameter == 'New Game':
         current_screen = SCREENS.get('gamemode')
         current_screen.on_enter()
@@ -1060,23 +1467,27 @@ MENU_HANDLING = {
     GameStates.LEVEL_UP: handle_level_up_menu,
     GameStates.CHARACTER_SCREEN: handle_character_screen,
     GameStates.READ: handle_character_screen,
-    GameStates.ENEMY_TURN: handle_no_action
+    GameStates.ENEMY_TURN: handle_no_action,
+    GameStates.DIALOGUE: handle_dialogue
 }
 
 
-PLAYER_TURN_RESULTS = {
+TURN_RESULTS = {
     'message': Game.display_message,
+    'spawn_particle': Game.spawn_particle,
     'item_added': Game.item_added,
     'consumed': Game.item_consumed,
     'reuseable': Game.item_reuseable,
     'item_dropped': Game.item_dropped,
-    'equip:': Game.equip_player,
+    'equip': Game.equip_player,
     'targeting': Game.activate_targeting_mode,
     'map': Game.activate_map,
     'targeting_cancelled': Game.deactivate_targeting_mode,
     'xp': Game.obtain_xp,
-    'chest': Game.chest_interact,
-    'dead': Game.dead_entity
+    'change_map_object': Game.change_map_object,
+    'dead': Game.dead_entity,
+    "see_through_key_hole": Game.temporary_vision,
+    # "npc_message": Game.
 }
 
 
