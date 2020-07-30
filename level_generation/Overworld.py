@@ -27,7 +27,7 @@ class Overworld:
     #     self.dungeon_level = 0
 
     def generate_level(self, game_map, dungeon_level, max_rooms, room_min_size, room_max_size, map_width, map_height,
-                       player, entities, item_table, mob_table, object_table):
+                       player, entities, particles, particle_systems, item_table, mob_table):
 
         self.game_map = game_map
         # self.dungeon_level = dungeon_level
@@ -58,7 +58,7 @@ class Overworld:
         #
         #
         # # Place Entities
-        player.x, player.y = map_width // 2, map_height // 2
+        player.position.x, player.position.y = map_width // 2, map_height // 2
 
         # Voronoi Generation
         polygons, map_size, center_points, vertices = FiniteVoronoi.voronoi_polygons(
@@ -126,7 +126,7 @@ class Overworld:
             max_x, max_y = z[-1]
             # print(min_x, min_y, max_x, max_y)
             b.generate_level(game_map, max_rooms, room_min_size, room_max_size, max_x-1, max_y-1,
-                       entities, item_table, mob_table, min_x-1, min_y-1, poly)
+                       entities, particles, item_table, mob_table, min_x-1, min_y-1, poly)
 
             # x = [p[0] for p in poly]
             # y = [p[1] for p in poly]
@@ -254,12 +254,10 @@ def connect_points(game_map, points, tile='1', thickness=1):
     """
 
     map = np.ones_like(game_map.walkable, order="F")
-    print('\nmap.shape:', map.shape, game_map.walkable.shape)
     total_path = []
     astar = tcod.path.AStar(map)
 
     for i, p in enumerate(points[:-1]):
-    # for i, p in enumerate(points[:-1]):
         start_x, start_y = int(p[0]), int(p[1])
         goal = points[i+1]
         goal_x, goal_y = int(goal[0]), int(goal[1])

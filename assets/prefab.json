@@ -10,11 +10,17 @@
           "height": 1,
           "template": [21]
         },
-  "chest": {
+  "open_chest": {
           "name": "Chest",
           "width": 1,
           "height": 1,
-          "template": [10]
+          "template": [9]
+  },
+  "closed_chest": {
+    "name": "Chest",
+    "width": 1,
+    "height": 1,
+    "template": [10]
   },
   "guard_bed": {
     "name": "Guard Bed",
@@ -27,5 +33,53 @@
     "width": 3,
     "height": 3,
     "template": [1, 26, 1, 25, 24, 25, 1, 26, 1]
+  },
+  "short_horizontal_table": {
+    "name": "Table",
+    "width": 3,
+    "height": 1,
+    "template": [31, 27, 30]
+  },
+  "short_vertical_table": {
+    "name": "Table",
+    "width": 1,
+    "height": 3,
+    "template": [28, 27, 29]
+  },
+  "tiny_table": {
+    "name": "Table",
+    "width": 1,
+    "height": 1,
+    "template": [27]
+  },
+  "medium_horizontal_table": {
+    "name": "Table",
+    "width": 5,
+    "height": 1,
+    "template": [31, 27, 27, 27, 30]
+  },
+  "medium_vertical_table": {
+    "name": "Table",
+    "width": 1,
+    "height": 5,
+    "template": [28, 27, 27, 27, 29]
+  },
+  "long_horizontal_table": {
+    "name": "Table",
+    "width": 7,
+    "height": 1,
+    "template": [31, 27, 27, 27, 27, 27, 30]
+  },
+  "long_vertical_table": {
+    "name": "Table",
+    "width": 1,
+    "height": 7,
+    "template": [28, 27, 27, 27, 27, 27, 29]
+  },
+  "chained_prisoner": {
+    "Name": "Chains",
+    "width": 3,
+    "height": 3,
+    "template": [34, 2, 34, 2, 2, 2, 34, 2, 34]
   }
 }

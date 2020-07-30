@@ -306,3 +306,20 @@ class BSPRoom(SquareRoom):
                 break
 
         self.entrances.extend(entrances)
+
+
+class MouseRoom:
+
+    # Used primarily to identify room types for debugging
+    def __init__(self, x, y, width, height, room_type):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.room_type = room_type
+
+    def check_point_within_room(self, point_x, point_y):
+        return self.x < point_x < self.x + self.width and self.y < point_y < self.y + self.height
+
+    def __repr__(self):
+        return "Room: {} ({}, {}) to ({}, {})".format(self.room_type, self.x, self.y, self.x + self.width, self.y + self.height)

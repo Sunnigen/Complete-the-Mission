@@ -38,7 +38,7 @@ class BSPTreeAlgorithm:
         #     start_x, start_y = self.rooms[-1].center
 
         # Place Player
-        # player.x, player.y = start_x, start_y
+        # player.position.x, player.position.y = start_x, start_y
         # Place Stairs
         # entities.append(place_stairs(self.game_map.dungeon_level, last_x, last_y))
 

@@ -11,7 +11,8 @@ class BinarySpacePartition(BSP):
         self.sub_rooms = []
         self.within_room = False
         self.cell_block_depth = 2
-        self.cell_block_wall_buffer = 2
+        self.cell_block_wall_buffer = 1
+        self.cell_block_min_size = 12
         super(BinarySpacePartition, self).__init__(x=0, y=0, width=1, height=1)
 
     def print_grid(self, other_car="$ "):
@@ -38,25 +39,28 @@ class BinarySpacePartition(BSP):
             print('Initialize BSP Variables first!')
         self.initialize_grid()
         # Generate Cell Blocks
-        # cell_block_depth = randint(100, 120)
-        # cell_block_depth = randint(1, 2)
-        wall_buffer = randint(3, 6)
-        self.iterate_bsp(depth=self.cell_block_depth, min_width=12, min_height=12,
-                         wall_buffer=self.cell_block_wall_buffer)
+        if self.cell_block_depth > 0:
+            self.iterate_bsp(depth=self.cell_block_depth, min_width=self.cell_block_min_size,
+                             min_height=self.cell_block_min_size, wall_buffer=self.cell_block_wall_buffer)
+        else:
+            self.rooms[BSP(x=1, y=1, width=self.width-1, height=self.height-1)] = []
 
         # Generate Sub Rooms for Each Cell Block
         actual_cell_blocks = {}
         cell_blocks = self.rooms.keys()
-        if len(cell_blocks) > 1:
+        if len(cell_blocks) > 0:
             # Further Split Cell Blocks into Sub Rooms for Jail Cells and other Prefab Rooms
+            # print('# Further Split Cell Blocks into Sub Rooms for Jail Cells and other Prefab Rooms')
             for cell_block in cell_blocks:
+                # print('cell_block:', cell_block)
                 bsp = BinarySpacePartition()
                 bsp.x = cell_block.x
                 bsp.y = cell_block.y
-                bsp.width = cell_block.width - wall_buffer
-                bsp.height = cell_block.height - wall_buffer
-                bsp.iterate_bsp(depth=self.cell_block_depth * 2, min_width=6, min_height=6, within_room=True,
-                                cell_block=cell_block, cell_block_rooms=self.rooms, grid=self.grid)
+                bsp.width = cell_block.width - self.cell_block_wall_buffer
+                bsp.height = cell_block.height - self.cell_block_wall_buffer
+                bsp.iterate_bsp(depth=self.cell_block_depth * 2, min_width=self.cell_block_min_size//2,
+                                min_height=self.cell_block_min_size//2 , within_room=True, cell_block=cell_block,
+                                cell_block_rooms=self.rooms, grid=self.grid)
                 actual_cell_blocks[bsp] = self.rooms[cell_block]  # TODO: replace this with a better implementation
 
             # TODO: replace this with a better implementation
@@ -191,6 +195,7 @@ class BinarySpacePartition(BSP):
                         x == room.x + room.width - buffer or \
                         y == room.y or \
                         y == room.y + room.height - buffer:
+
                     self.grid[x][y] = 1
                 else:
                     self.grid[x][y] = 0

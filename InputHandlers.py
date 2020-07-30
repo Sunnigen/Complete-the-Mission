@@ -77,6 +77,16 @@ def handle_debug_menu(engine, key, game_state=None, player=None):
     return actions.get(key.sym, no_key_action)
 
 
+def handle_dialogue(engine, key, game_state=None, player=None):
+    # print('handle_dialogue', key)
+    actions = {
+        tcod.event.K_r: engine.dialogue,  # continue dialogue
+        tcod.event.K_KP_5: engine.dialogue  # continue dialogue
+    }
+
+    return actions.get(key.sym, no_key_action)
+
+
 def handle_player_turn_keys(engine, key, game_state=None, player=None):
     # print('handle_player_turn_keys', key)
     actions = {
