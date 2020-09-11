@@ -8,7 +8,7 @@ class Entity:
     A generic object to represent players, enemies, items, etc.
     """
     def __init__(self, char, color, name, json_index, position=None, blocks=False, render_order=RenderOrder.CORPSE,
-                 fighter=None, ai=None, item=None, inventory=None, stairs=None, level=None, equipment=None,
+                 fighter=None, spellcaster=None, ai=None, item=None, inventory=None, stairs=None, level=None, equipment=None,
                  equippable=None, furniture=None, faction=None, particle=None, dialogue=None):
         # Required Components
         # self.x = x
@@ -23,6 +23,7 @@ class Entity:
         self.blocks = blocks
         self.render_order = render_order
         self.fighter = fighter
+        self.spellcaster = spellcaster
         self.ai = ai
         self.item = item
         self.inventory = inventory
@@ -40,6 +41,9 @@ class Entity:
 
         if self.fighter:
             self.fighter.owner = self
+
+        if self.spellcaster:
+            self.spellcaster.owner = self
 
         if self.ai:
             self.ai.owner = self

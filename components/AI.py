@@ -6,6 +6,8 @@ from GameMessages import Message
 from loader_functions.JsonReader import obtain_mob_table
 from map_objects.GameMapUtils import get_map_object_at_location
 
+from SpellFunctions import cast_mend, cast_thorn_spike
+
 MOBS = obtain_mob_table()
 
 
@@ -102,10 +104,25 @@ class AI:
         self.encounter.remove_entity(self.owner)
 
     def advance_on_current_target(self, entities, game_map, fov_map, dist, radius, results, target_x, target_y):
-
         mob = self.owner
-        attack_range = 0.99
-        # print('advance_on_current_target', radius >= dist)
+
+        # Check to Cast Spell or Perform Skill
+        if self.current_target:
+            if self.owner.spellcaster:
+
+                if self.owner.spellcaster.has_spells:
+
+                    # Check HP to Heal
+                    if self.owner.fighter.hp <= self.owner.fighter.max_hp // 2:
+                        results.extend(self.owner.spellcaster.cast(cast_mend))
+                        return results
+
+                    # Check Enemy to cast Spell
+                    if self.owner.faction.check_enemy(self.current_target.faction.faction_name) and \
+                        mob.position.distance_to(self.current_target.position.x, self.current_target.position.y) < 5:
+                        # Select Self Buff or Offensive Spell
+                        results.extend(self.owner.spellcaster.cast(cast_thorn_spike, target=self.current_target))
+                        return results
 
         # Check if Stuck to Reset Path
         if self.stuck_time > self.stuck_time_max:
@@ -113,18 +130,19 @@ class AI:
             self.stuck_time = 0
 
         # Target is Within Range, Attack
-        # TODO: Attach Range Variable
         if self.current_target:
             if self.current_target.fighter.hp > 0 and \
-                    mob.position.distance_to(self.current_target.position.x, self.current_target.position.y) <= attack_range:
+                    mob.position.distance_to(self.current_target.position.x, self.current_target.position.y) <= self.owner.fighter.attack_range:
                 # print('# Target is Within Range, Attack')
 
                 attack_results = mob.fighter.attack(self.current_target)
                 results.extend(attack_results)
                 return results
 
-        # Close distance to Target
-        if radius >= dist:
+        # Close distance to Target or Evade
+        if (self.current_target and not self.path) or \
+                (self.last_target_position and not self.path) or \
+                (self.current_target and not (target_y, target_x) in self.path):
             self.path = mob.position.move_astar(target_x, target_y, game_map)
 
         # Move Entity to Next Floor if Seeking
@@ -143,10 +161,12 @@ class AI:
         # Finally Move
         if self.path:
             results.extend(self.move_on_path(game_map, entities, results))
+            self.direction_vector = get_direction(self.owner.position.x, self.owner.position.y, target_x, target_y)
 
         return results
 
     def move_on_path(self, game_map, entities, results):
+        # print('\n\nmove_on_path')
         mob = self.owner
         y, x = self.path[0]
         self.direction_vector = get_direction(self.owner.position.x, self.owner.position.y, x, y)
@@ -166,17 +186,18 @@ class AI:
             results.extend(interact_results)
 
         # Check if Entity in the way
+        # print('# Check if Entity in the way')
+        # print('map_object_entity:', map_object_entity)
         if not game_map.walkable[y][x] or game_map.tile_cost[y][x] > 98:
             self.stuck_time += 1
-
+            # print('returning results:', results)
             return results
 
         # Remove Step from Path and Update Direction FOV
         self.path.pop(0)
 
-
         # Update Previous and New Destination on Game Map
-        # game_map.transparent[self.owner.y][self.owner.x] = True  # unblock previous position
+        # game_map.transparent[self.owner.y][sealf.owner.x] = True  # unblock previous position
         # game_map.transparent[y][x] = False  # block new position# Update Position
         tile_index = game_map.tileset_tiles[y][x]
         game_map.tile_cost[self.owner.position.y][self.owner.position.x] = game_map.tile_set.get('%s' % tile_index).get('tile_cost')
@@ -185,34 +206,37 @@ class AI:
         # Finally Update Entity Position
         self.owner.position.x = x
         self.owner.position.y = y
+
+        # Spawn Sound Particle if not in player FOV
+        # print('# Spawn Sound Particle if not in player FOV')
+        # print('{} pos: {}'.format(self.owner.name, self.owner.position))
+        if not (x, y) in game_map.player.fighter.curr_fov_map:
+            results.append({"spawn_particle": ["sound", x, y, None]})
+
         return results
 
     def take_turn(self, fov_map, game_map, entities):
         results = []
         mob = self.owner
         radius = self.owner.fighter.fov_range
-        if self.current_target:
-            print('\ntake_turn')
-            print(self.owner.name)
-            print(self.target_not_within_fov_counter, self.target_not_within_fov_max)
-            print(self.path)
 
         if self.current_target:
+            self.wait_time = 0
             target_x, target_y = self.current_target.position.x, self.current_target.position.y
 
             # Change Direction to Face Target
-            self.direction_vector = get_direction(self.owner.position.x, self.owner.position.y, target_x, target_y)
             dist = mob.position.distance_to(target_x, target_y)
 
             # Target is in FOV map and Within Entities FOV range
-            if fov_map[target_y][
-                target_x] and radius >= dist and self.target_not_within_fov_counter <= self.target_not_within_fov_max:
-                self.last_target_position = self.current_target.position.x, self.current_target.position.y
+            if (target_y, target_x) in fov_map and self.target_not_within_fov_counter <= self.target_not_within_fov_max:
+            # if (target_y, target_x) in fov_map and radius >= dist and self.target_not_within_fov_counter <= self.target_not_within_fov_max:
+                self.last_target_position = target_x, target_y
                 results = self.advance_on_current_target(entities, game_map, fov_map, dist, radius, results, target_x,
                                                          target_y)
                 self.target_not_within_fov_counter = 0
-            elif radius >= dist and self.target_not_within_fov_counter <= self.target_not_within_fov_max:
-                self.last_target_position = self.current_target.position.x, self.current_target.position.y
+            elif self.target_not_within_fov_counter <= self.target_not_within_fov_max:
+            # elif radius >= dist and self.target_not_within_fov_counter <= self.target_not_within_fov_max:
+                self.last_target_position = target_x, target_y
                 results = self.advance_on_current_target(entities, game_map, fov_map, dist, radius, results, target_x,
                                                          target_y)
                 self.target_not_within_fov_counter += 1
@@ -220,6 +244,7 @@ class AI:
             else:
                 # Cannot Find Entity
                 self.idle_guard()
+
         elif self.last_target_position:
             # Go to Last Position Where Previous Entity was Seen
             target_x, target_y = self.last_target_position
@@ -285,28 +310,7 @@ class DefensiveAI(AI):
         radius = self.owner.fighter.fov_range
 
         if self.current_target:
-            self.wait_time = 0
-            target_x, target_y = self.current_target.position.x, self.current_target.position.y
-
-            # Change Direction to Face Target
-            self.direction_vector = get_direction(self.owner.position.x, self.owner.position.y, target_x, target_y)
-            dist = mob.position.distance_to(target_x, target_y)
-
-            # Target is in FOV map and Within Entities FOV range
-            if fov_map[target_y][target_x] and radius >= dist and self.target_not_within_fov_counter <= self.target_not_within_fov_max:
-                self.last_target_position = self.current_target.position.x, self.current_target.position.y
-                results = self.advance_on_current_target(entities, game_map, fov_map, dist, radius, results, target_x,
-                                                         target_y)
-                self.target_not_within_fov_counter = 0
-            elif not fov_map[target_y][target_x] and radius >= dist and self.target_not_within_fov_counter <= self.target_not_within_fov_max:
-                self.last_target_position = self.current_target.position.x, self.current_target.position.y
-                results = self.advance_on_current_target(entities, game_map, fov_map, dist, radius, results, target_x,
-                                                         target_y)
-                self.target_not_within_fov_counter += 1
-
-            else:
-                # Cannot Find Entity
-                self.idle_guard()
+            results = super(DefensiveAI, self).take_turn(fov_map, game_map, entities)
 
         elif self.last_target_position:
             # Go to Last Position Where Previous Entity was Seen
@@ -357,6 +361,7 @@ class FollowAI(DefensiveAI):
     follow_entity = None
     follow_distance = 1
     # follow_max_distance = 5
+    wait_time_max = 2
 
     def __init__(self, follow_entity, **kwargs):
         self.follow_entity = follow_entity
@@ -393,21 +398,22 @@ class PatrolAI(AI):
 
         # Seek/Attack Player if in Range, otherwise Patrol to other Rooms
         if self.current_target:
-            self.wait_time = 0
-            target_x, target_y = self.current_target.position.x, self.current_target.position.y
-
-            # Change Direction to Face Target
-            self.direction_vector = get_direction(self.owner.position.x, self.owner.position.y, target_x, target_y)
-            dist = mob.position.distance_to(target_x, target_y)
-
-            # Target is in FOV map and Within Entities FOV range
-            if fov_map[target_y][target_x] and radius >= dist:
-                self.last_target_position = self.current_target.position.x, self.current_target.position.y
-                results = self.advance_on_current_target(entities, game_map, fov_map, dist, radius, results, target_x, target_y)
-
-            else:
-                # Cannot Find Entity
-                self.idle_guard()
+            results = super(PatrolAI, self).take_turn(fov_map, game_map, entities)
+            # self.wait_time = 0
+            # target_x, target_y = self.current_target.position.x, self.current_target.position.y
+            # 
+            # # Change Direction to Face Target
+            # self.direction_vector = get_direction(self.owner.position.x, self.owner.position.y, target_x, target_y)
+            # dist = mob.position.distance_to(target_x, target_y)
+            # 
+            # # Target is in FOV map and Within Entities FOV range
+            # if (target_y, target_x) in fov_map and radius >= dist:
+            #     self.last_target_position = self.current_target.position.x, self.current_target.position.y
+            #     results = self.advance_on_current_target(entities, game_map, fov_map, dist, radius, results, target_x, target_y)
+            # 
+            # else:
+            #     # Cannot Find Entity
+            #     self.idle_guard()
 
         elif self.last_target_position:
 
@@ -561,6 +567,9 @@ class PursueAI(AI):
 
 
 class FleeAI(AI):
+    goal_x = None
+    goal_y = None
+
     def __init__(self, previous_ai):
         self.previous_ai = previous_ai
         super(FleeAI, self).__init__(previous_ai.encounter)
@@ -569,9 +578,26 @@ class FleeAI(AI):
         results = []
         mob = self.owner
 
+        # Find Closest Allied Encounter and Inform Them
+        if not self.goal_x and not self.goal_y:
+            self.goal_x, self.goal_y = self.find_closest_allies(game_map)
+
+        # Find Farthest Area Away(Dijkstra)
+        if not self.goal_x and not self.goal_y:
+            pass
         # do dijkstra map stuff
 
         return results
+
+    def find_closest_allies(self, game_map):
+        possible_encounters = {}
+        for encounter in game_map.encounters:
+            if encounter.faction_compatibility(self.owner.faction):
+                possible_encounters[self.owner.position.distance_to(encounter.main_room.x, encounter.main_room.y)] = encounter.main_room
+        if possible_encounters:
+            return possible_encounters[min(possible_encounters)]
+
+        return (None, None)
 
 
 class ConfusedAI(AI):

@@ -5,7 +5,7 @@ from GameMessages import Message
 class Fighter:
     owner = None
 
-    def __init__(self, hp, defense, power, xp=0, fov_range=2, mob_level=None):
+    def __init__(self, hp, defense, power, attack_range=0.99, xp=0, fov_range=2, is_player=False, mob_level=None):
         self.base_max_hp = hp
         self.hp = hp
         self.base_defense = defense
@@ -13,10 +13,13 @@ class Fighter:
         self.xp = xp
         self.god_mode = 0
         self.fov_range = fov_range
+        self.attack_range = attack_range
         self.mob_level = mob_level
 
+        self.is_player = is_player
+
         # self.curr_fov = set()  # set containing coordinates of what fighter can actually see
-        self.curr_fov_map = None  # numpy 2d array of what fighter can actually see
+        self.curr_fov_map = []  # numpy 2d array of what fighter can actually see
 
         # Stats
         self.str = 0
@@ -77,7 +80,10 @@ class Fighter:
             damage = 0
             # results.append({'message': Message('The attack did nothing to the %s.' % self.owner.name)})
         else:
-            damage = self.power - target.fighter.defense
+
+            # Check Critical Hit from Not in FOV
+            critical_hit_mod = 1 + (self.is_player * 3 * ((self.owner.position.y, self.owner.position.x) not in target.fighter.curr_fov_map))
+            damage = (self.power - target.fighter.defense) * critical_hit_mod
 
         if damage > 0:
             results.append({'message': Message('%s attacks %s for %s hit points.' % (

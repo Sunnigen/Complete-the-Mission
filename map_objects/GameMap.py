@@ -54,9 +54,12 @@ class GameMap(Map):
     temporary_vision = []  # list of coordinates that are used for temporary vision for player
     next_floor_entities = []
 
+    default_tile = 1
+
     turn_count = 0
     # turn_count = None
     game_events = []
+    level_message = ''
 
     def __init__(self, width, height, dungeon_level=1):
         super(GameMap, self).__init__(width, height)
@@ -70,7 +73,6 @@ class GameMap(Map):
 
     def initialize_open_map(self):
         # Set Entire Map to Open Floor
-
         self.explored = [[False for x in range(self.width)] for y in range(self.height)]
         self.tile_cost = [[1 for x in range(self.width)] for y in range(self.height)]
         self.tileset_tiles = [[2 for x in range(self.width)] for y in range(self.height)]
@@ -118,19 +120,65 @@ class GameMap(Map):
         # furniture_table = {key: val for key, val in self.tile_set.items() if val.get('type') == 'object'}
 
         # print('level:', level)
-        if level == 'overworld':
-            self.initialize_open_map()
-            self.level = 'overworld'
-            self.map = Overworld()
-        elif level == 'undergrave':
-            self.initialize_closed_map()
-            self.map = UndergravePrison()
-            self.level = 'undergrave'
-        elif level == 'resinfaire':
+        # if level == 'overworld':
+        #     self.default_tile = 0
+        #     self.initialize_open_map()
+        #     self.level = 'overworld'
+        #     self.map = Overworld()
+        #
+        # elif level == 'undergrave':
+        #     self.default_tile = 1
+        #     self.initialize_closed_map()
+        #     self.map = UndergravePrison()
+        #     self.level = 'undergrave'
+        #
+        # elif level == 'resinfaire':
+        #     self.default_tile = 13
+        #     self.initialize_closed_map()
+        #     self.map = ResinFaireForest()
+        #     self.level = 'resinfaire'
+        #     mob_table = obtain_mob_table("resinfaire_mobs")
+        #     item_table = obtain_item_table()
+        #
+        # else:
+        #     self.default_tile = 1
+        #     self.initialize_closed_map()
+        #     self.map = choice(LEVEL_GENERATION)()
+        #     self.level = 'Dungeon'
+        self.dungeon_level = 3
+        if self.dungeon_level == 1:
+            self.level_message = "You begin your journey to the Castle of Yendor.\n\nThe tales of its plagued forest, massacred-crazed townsfolk and corrupt King perplex you as to venture to find out what happened."
+            self.default_tile = 13
             self.initialize_closed_map()
             self.map = ResinFaireForest()
             self.level = 'resinfaire'
+            mob_table = obtain_mob_table("resinfaire_mobs")
+            map_width = 30
+            map_height = 45
+            item_table = obtain_item_table()
+        elif self.dungeon_level == 2:
+            self.level_message = "As you continue through Resinfaire Forest, you begin notice the normal denizens look slightly warped.\n\n\"What must've happened?\"\n-you wonder.\n\nYou step forward cautiously."
+            self.default_tile = 13
+            self.initialize_closed_map()
+            self.map = ResinFaireForest()
+            self.level = 'resinfaire'
+            mob_table = obtain_mob_table("resinfaire_mobs")
+            item_table = obtain_item_table()
+            map_width = 40
+            map_height = 55
+        elif self.dungeon_level == 3:
+            self.level_message = "You see a village in the distance"
+            self.default_tile = 13
+            self.initialize_closed_map()
+            self.map = ResinFaireForest()
+            self.level = 'resinfaire'
+            mob_table = obtain_mob_table("resinfaire_mobs")
+            item_table = obtain_item_table()
+            map_width = 55
+            map_height = 55
         else:
+            self.level_message = "The journey continues. You clench your weapon tightly and trudge forward."
+            self.default_tile = 1
             self.initialize_closed_map()
             self.map = choice(LEVEL_GENERATION)()
             self.level = 'Dungeon'
@@ -146,6 +194,9 @@ class GameMap(Map):
                 print('\t{}'.format(e.name))
             # entities.extend(deepcopy(self.next_floor_entities))
         self.next_floor_entities = []
+
+
+
 
         # map_print = np.empty(shape=(self.height, self.width), dtype=str, order="F")
         # # Mob and Item Entities
@@ -206,10 +257,22 @@ class GameMap(Map):
                       constants['map_width'], constants['map_height'], player, entities, particles, particle_systems,
                       self.encounters, self.level)
 
-        # player.fighter.heal(player.fighter.max_hp // 2)
 
         message_log.add_message(Message('You advance to the next level: Dungeon Level %s!' % self.dungeon_level,
                                         libtcod.light_violet))
+
+        # if player.fighter.hp < player.fighter.max_hp // 5:
+        #     message_log.add_message(Message('You slowly lurch forward, clutching your mortal wounds', libtcod.red))
+        # elif player.fighter.hp < player.fighter.max_hp // 3:
+        #     message_log.add_message(Message('The pain.', libtcod.orange))
+        # elif player.fighter.hp < player.fighter.max_hp // 2:
+        #     message_log.add_message(Message('You take sometime to tend to your wounds.', libtcod.orange))
+        # else:
+        if player.fighter.hp < player.fighter.max_hp:
+            message_log.add_message(Message('You take sometime to tend to your wounds.', libtcod.light_orange))
+        else:
+            message_log.add_message(Message('You take take a breather before trudging on.', libtcod.light_green))
+        player.fighter.heal(player.fighter.max_hp)
         return entities, particles, particle_systems
 
     def obtain_open_floor(self, points):

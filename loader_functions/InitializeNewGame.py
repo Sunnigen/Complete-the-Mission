@@ -93,13 +93,13 @@ def get_constants():
 
 def get_game_variables(constants, level=None):
     # Player Variables
-    fighter_component = Fighter(hp=100, defense=1, power=2, fov_range=constants.get('fov_radius'))
+    fighter_component = Fighter(hp=30, defense=0, power=1, is_player=True, fov_range=constants.get('fov_radius'))
     inventory_component = Inventory(26)
     level_component = Level()
     equipment_component = Equipment()
     faction_component = Faction(faction_name='Player')
     position_component = Position(0, 0)
-    player = Entity(64, (191, 171, 143), 'Player', "player", blocks=True, render_order=RenderOrder.ACTOR, position=position_component,
+    player = Entity("@", (191, 171, 143), 'Player', "player", blocks=True, render_order=RenderOrder.ACTOR, position=position_component,
                     fighter=fighter_component, inventory=inventory_component, level=level_component,
                     equipment=equipment_component, faction=faction_component)
     entities = [player]
@@ -111,8 +111,8 @@ def get_game_variables(constants, level=None):
     if not player.inventory.items:
         # starting_equipment = ['map', 'imperial_longsword', 'imperial_chainmail_leggings', 'imperial_chainmail_coif',
         #                       'imperial_chainmail_hauberk', 'imperial_battle_shield', 'teleport_crystal', 'blind_powder', 'confusion_scroll', 'lightning_scroll', 'fireball_scroll', 'poison_vial']
-        starting_equipment = ['map', 'dagger', 'fireball_scroll','fireball_scroll', 'lightning_scroll', 'lightning_scroll', 'lightning_scroll', 'lightning_scroll', 'master_key']
-        # starting_equipment = ['map', 'dagger', 'teleport_crystal','teleport_crystal', 'fireball_scroll', 'lightning_scroll', 'lightning_scroll', 'lightning_scroll', 'master_key']
+        # starting_equipment = ['map', 'dagger', 'fireball_scroll','fireball_scroll', 'lightning_scroll', 'lightning_scroll', 'lightning_scroll', 'lightning_scroll', 'master_key']
+        starting_equipment = ['map','dagger', 'healing_potion', 'healing_potion']
         for item_index in starting_equipment:
             item_entity = create_item_entity(item_index)
             player.inventory.add_item(item_entity)
@@ -130,6 +130,6 @@ def get_game_variables(constants, level=None):
     message_log = MessageLog(constants['message_x'], constants['message_width'], constants['message_height'])
 
     # Initialize Game State
-    game_state = GameStates.PLAYER_TURN
+    game_state = GameStates.EVENT_MESSAGE
 
     return player, entities, particles, particle_systems, game_map, message_log, game_state

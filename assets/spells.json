@@ -1,0 +1,32 @@
+{
+  "spirit_sight": {
+    "name": "Spirit Sight",
+    "cool_down": 20,
+    "cost": 5,
+    "value": 0,
+    "range": 5,
+    "description": "Enables user to feel the presence of other entities through walls",
+    "spell_function": "cast_thorn_spike",
+    "targeting": false
+  },
+  "mend": {
+    "name": "Mend",
+    "cool_down": 10,
+    "cost": 5,
+    "description": "Heal user immediately and slowly overtime.",
+    "spell_function": "cast_mend",
+    "targeting": false
+  },
+
+  "thorn_spike": {
+    "name": "Thorn Spike",
+    "cool_down": 10,
+    "cost": 5,
+    "value": 3,
+    "range": 5,
+    "description": "Summons thorns from nearby vines or trees and hurls them.",
+    "spell_function": "cast_thorn_spike",
+    "targeting": true,
+    "targeting_message": "Select a target to launch spikes at."
+  }
+}

@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 from components.AI import *
 
 
@@ -65,6 +63,14 @@ class Encounter:
                 target = possible_targets[min(possible_targets)]
                 mob.ai.last_target_position = (target.position.x, target.position.y)
                 # print("%s at (%s, %s) is now pursuing %s at (%s, %s)" % (mob.name, mob.x, mob.y, target.name, target.x, target.y))
+
+    def faction_compatibility(self, faction_compare):
+        # If at least 50% of faction are not hostile, return True
+        hostile_factions = []
+        for entity in self.mob_list:
+            hostile_factions.append(entity.faction.check_enemy(faction_compare))
+
+        return hostile_factions.count(True) >= len(self.mob_list) // 2
 
     def __repr__(self):
         a = '\n\nEncounter #%s' % self.encounter_number

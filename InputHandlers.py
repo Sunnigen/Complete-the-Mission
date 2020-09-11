@@ -87,6 +87,10 @@ def handle_dialogue(engine, key, game_state=None, player=None):
     return actions.get(key.sym, no_key_action)
 
 
+def handle_event_message(engine, key, game_state=None, player=None):
+    return engine.close_game_message
+
+
 def handle_player_turn_keys(engine, key, game_state=None, player=None):
     # print('handle_player_turn_keys', key)
     actions = {

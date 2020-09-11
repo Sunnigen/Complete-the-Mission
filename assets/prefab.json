@@ -77,9 +77,32 @@
     "template": [28, 27, 27, 27, 27, 27, 29]
   },
   "chained_prisoner": {
-    "Name": "Chains",
+    "name": "Chains",
     "width": 3,
     "height": 3,
     "template": [34, 2, 34, 2, 2, 2, 34, 2, 34]
+  },
+  "output_test": {
+    "name": "Outpost",
+    "width": 5,
+    "height": 5,
+    "template": [40, 38, 2 , 38, 43,
+                 39, 2,  2,  2,  39,
+                 2,  2,  2,  2,  2,
+                 39, 2,  2,  2,  39,
+                 41, 38, 2,  38, 42
+    ]
+  },
+  "town_center": {
+    "name": "Town Center",
+    "width": 5,
+    "height": 5,
+    "template": [49, 49, 49, 49, 49,
+                 49, 49, 49, 49, 49,
+                 49, 49, 50, 49, 49,
+                 49, 49, 49, 49, 49,
+                 49, 49, 49, 49, 49
+
+    ]
   }
 }

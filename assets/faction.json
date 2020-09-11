@@ -5,7 +5,7 @@
   },
   "Imperials": {
     "ally": ["Imperials"],
-    "enemy": ["Rebels", "Mindless"]
+    "enemy": ["Player", "Rebels", "Mindless"]
   },
   "Prisoners of War": {
     "ally": [],

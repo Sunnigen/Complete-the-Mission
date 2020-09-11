@@ -1,7 +1,7 @@
 {
   "hit": {
     "name": "Hit Particle",
-    "lifetime": 2,
+    "lifetime": 3,
     "fg": [255, 0, 63],
     "char": 34,
     "glyph": "\""
@@ -48,5 +48,12 @@
     "lifetime": 1,
     "bg": [[191, 47, 0], [128, 31, 0], [64, 16, 0]],
     "forever": true
+  },
+  "sound": {
+    "name": "Sound Particle",
+    "lifetime": 20,
+    "fg": [255, 255, 255],
+    "glyph": "?",
+    "within_fov": false
   }
 }

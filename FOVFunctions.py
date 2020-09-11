@@ -22,16 +22,18 @@ def initialize_fov(game_map):
     return fov_map
 
 
-def recompute_fov(fov_map, x, y, radius, entrances, light_walls=True, algorithm=0):
+def recompute_fov(fov_map, player, temporary_vision, light_walls=True, algorithm=0):
+    x, y = player.position.x, player.position.y
+    radius = player.fighter.fov_range
+
     # TODO: Enable FOV for an open or closed door
+    for _x, _y in temporary_vision:
+        fov_map.transparent[_y][_x] = True
 
-    for door_x, door_y in entrances:
-        fov_map.transparent[door_y][door_x] = True
-
-    fov_map.compute_fov(x, y, radius, light_walls, algorithm)
+    return compute_fov(fov_map.transparent.T, (x, y), radius, light_walls, algorithm)
 
 
-def enemy_recompute_fov(transparency_map, pov, radius, light_walls=True, algorithm=tcod.FOV_RESTRICTIVE):
+def enemy_recompute_fov(transparency_map, pov, radius, light_walls=True, algorithm=tcod.FOV_BASIC):
     return compute_fov(transparency_map, pov, radius, light_walls, algorithm)
 
 
@@ -70,14 +72,14 @@ def definite_enemy_fov(game_map, fov_map, entrances, entities, light_walls=False
                                                      e.fighter.fov_range, light_walls, algorithm)
 
             # Update Individual Fighter FOV
-            e.fighter.curr_fov_map = _new_enemy_fov_map
+            curr_fov_map = np.where(_new_enemy_fov_map==True)
+            e.fighter.curr_fov_map = list(zip(curr_fov_map[0], curr_fov_map[1]))
+            # e.fighter.curr_fov_map = _new_enemy_fov_map
 
             # Remove Temporary Block
             for vx, vy in temp_block:
-                # fov_map.transparent[vy][vx] = True
                 tile = '%s' % game_map.tileset_tiles[vy][vx]
                 if TILE_SET.get(tile).get("transparent"):
-                # if game_map.fov[vy][vx]:
                     fov_map.transparent[vy][vx] = True
 
             # Add to Main Enemy FOV Map

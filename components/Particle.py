@@ -18,9 +18,10 @@ class Particle:
     blink_duration = None
     propagate = False
     progagate_property = None
+    within_fov = True
 
     def __init__(self, lifetime, fg=None, bg=None, char=None, blink=None, duration=None, forever=False, propagate=False,
-                 propagate_property=None, particle_system=None):
+                 within_fov=True, propagate_property=None, particle_system=None):
         self.lifetime = lifetime
         self.fg = fg
         self.bg = bg
@@ -29,6 +30,7 @@ class Particle:
         self.propagate = propagate
         self.progagate_property = propagate_property
         self.particle_system = particle_system
+        self.within_fov = within_fov
 
     def update(self, dt):
         # Will cancel itself and not change self.lifetime if "self.forever" is True

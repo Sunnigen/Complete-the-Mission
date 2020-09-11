@@ -13,3 +13,4 @@ class GameStates(Enum):
     CHARACTER_SCREEN = 8
     READ = 9
     DIALOGUE = 10
+    EVENT_MESSAGE = 11
