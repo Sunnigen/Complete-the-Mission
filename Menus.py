@@ -7,7 +7,7 @@ from loader_functions.JsonReader import obtain_tile_set
 TILE_SET = obtain_tile_set()
 
 
-def picture(con, game_map, dungeon_map, header, map_width, map_height, screen_width, screen_height, panel_height):
+def picture(console, game_map, dungeon_map, header, map_width, map_height, screen_width, screen_height, panel_height):
     # create an off-screen console that represents the menu's window
     window = tcod.console_new(screen_width, screen_height)
 
@@ -27,26 +27,26 @@ def picture(con, game_map, dungeon_map, header, map_width, map_height, screen_wi
         true_height = 0
     else:
         true_height = -map_height // 4
-
-    tcod.console_blit(window, true_width, true_height, map_width, map_height, 1, 0, 0, 1.0, 1.0)
+    window.blit(dest=console, dest_x=0, dest_y=0, src_x=0, src_y=0,width=map_width, height=map_height)
+    # tcod.console_blit(window, true_width, true_height, map_width, map_height, 1, 0, 0, 1.0, 1.0)
     # tcod.console_blit(window, -map_width // 4, -map_height // 4, map_width, map_height, 1, 0, 0, 1.0, 1.0)
 
 
-def menu(con, header, options, width, screen_width, screen_height, cursor_position=0):
+def menu(console, header, options, width, screen_width, screen_height, cursor_position=0):
     # Main Function to Display a Generic Menu
     if len(options) > 26:
         raise ValueError("Cannot have a menu with more than 26 options!")
 
     # Calculate total height for the header (after auto-wrap) and one line per option
-    header_height = tcod.console_get_height_rect(con, 0, 0, width, screen_height, header)
+    header_height = console.get_height_rect(0, 0, width, screen_height, header)
     height = len(options) + header_height
 
     # create an off-screen console that represents the menu's window
     window = tcod.console.Console(width, height)
 
     # print the header, with auto-wrap
-    tcod.console_set_default_foreground(window, tcod.white)
-    tcod.console_print_rect_ex(window, 0, 0, width, height, tcod.BKGND_NONE, tcod.LEFT, header)
+    # tcod.console_set_default_foreground(window, tcod.white)
+    window.print_box(0, 0, width, height, header, alignment=tcod.LEFT)
 
     # print all the options is a letter-bullet-list format
     y = header_height
@@ -70,7 +70,8 @@ def menu(con, header, options, width, screen_width, screen_height, cursor_positi
     # blit the contents of "window" to the root console
     x = int(screen_width / 2 - width / 2)
     y = int(screen_height / 2 - height / 2)
-    tcod.console_blit(window, 0, 0, width, height, 0, x, y, 1.0, 0.7)
+    window.blit(dest=console, dest_x=x, dest_y=y, src_x=0, src_y=0, width=width, height=height, fg_alpha=1.0,
+                bg_alpha=0, key_color=None)
 
 
 def inventory_menu(con, header, player, inventory_width, screen_width, screen_height):
@@ -124,7 +125,7 @@ def level_up_menu(con, header, player, menu_width, screen_width, screen_height):
     menu(con, header, options, menu_width, screen_width, screen_height)
 
 
-def map_screen(con, entities, game_map, header, map_width, map_height, screen_width, screen_height, panel_height):
+def map_screen(console, entities, game_map, header, map_width, map_height, screen_width, screen_height, panel_height):
     # TODO: Save processing time by keeping base map as image file and modify add entities before blitting?
     dungeon_map = TcodImage(width=game_map.width, height=game_map.height)
 
@@ -143,7 +144,7 @@ def map_screen(con, entities, game_map, header, map_width, map_height, screen_wi
         elif entity.ai:
             dungeon_map.put_pixel(entity.position.x, entity.position.y, entity.color)
 
-    picture(con, game_map, dungeon_map, header, map_width, map_height, screen_width, screen_height, panel_height)
+    picture(console, game_map, dungeon_map, header, map_width, map_height, screen_width, screen_height, panel_height)
 
 
 def debug_menu(con, header, menu_width, screen_width, screen_height):

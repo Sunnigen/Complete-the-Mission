@@ -1,6 +1,8 @@
+from math import sqrt
 from random import randint
 from collections import deque
 
+import numpy as np
 
 
 class CellularAutomata:
@@ -18,26 +20,129 @@ class CellularAutomata:
 
     sparse_wall_density = 3
     areas_of_interest = []  # areas of open space
+    start_area = None
+    end_area = None
 
-    def generate(self):
+    def create_entrance_exit(self, castle_entrance=False):
+        # Assume Entrance at Bottom, Exit at Top
+
+
+        # Generate Start Area
+        # entrance_x = 0
+        entrance_x = randint(2, len(self.grid) - 2)
+        entrance_y = len(self.grid[0]) - 1
+        width, height = 3, 3
+        self.start_area = AreaofInterest(entrance_x, entrance_y, width, height)
+
+        # Generate End Area
+        # entrance_x = len(self.grid) - 1
+        print('castle_entrance:', castle_entrance)
+        if castle_entrance:
+
+            entrance_x = self.width // 2
+            width, height = 15, 8
+        else:
+            entrance_x = randint(2, len(self.grid) - 2)
+            width, height = 3, 3
+        entrance_y = 0
+
+        self.end_area = AreaofInterest(entrance_x, entrance_y, width, height)
+
+        # Clear Tiles Around Start/End
+        for x in range(self.start_area.x - self.start_area.width//2, self.start_area.x + 1 + self.start_area.width//2):
+            for y in range(self.start_area.y - self.start_area.height//2, self.start_area.y + 1 + self.start_area.height):
+                try:
+                    1 // (abs(y + 1) + y + 1)
+                    1 // (abs(x + 1) + x + 1)
+                    self.grid[x][y] = 0
+                except IndexError:
+                    pass
+                except ZeroDivisionError:
+                    pass
+
+        for x in range(self.end_area.x - self.end_area.width//2, self.end_area.x + 1 + self.end_area.width//2):
+            for y in range(self.end_area.y  - self.end_area.height//2, self.end_area.y + 1 + self.end_area.height//2):
+                try:
+                    1 // (abs(y + 1) + y + 1)
+                    1 // (abs(x + 1) + x + 1)
+                    self.grid[x][y] = 0
+                except IndexError:
+                    pass
+                except ZeroDivisionError:
+                    pass
+
+        self.areas_of_interest.extend([self.start_area, self.end_area])
+
+    def ensure_path(self):
+        # self.print_grid()
+
+        for area in [self.start_area, self.end_area]:
+            closest_area = self.find_closest_area(area)
+            if closest_area:
+                # print(area, closest_area)
+                x = area.x
+                y = area.y
+                end_x = closest_area.x
+                end_y = closest_area.y
+                connected = False
+                while not connected:
+
+                    if x > end_x:
+                        x -= 1
+
+                    elif x < end_x:
+                        x += 1
+
+                    if y > end_y:
+                        y -= 1
+
+                    elif y < end_y:
+                        y += 1
+
+                    # print('creating path at', x, y, x != end_x and y != end_y)
+                    for dir_x, dir_y in [(x-1, y), (x+1, y), (x, y-1), (x, y+1), (x, y)]:
+                        try:
+                            self.grid[dir_x][dir_y] = 0
+                        except IndexError:
+                            pass
+
+                    if x == end_x and y == end_y:
+                        connected = True
+
+        # self.print_grid()
+
+    def find_closest_area(self, origin_area):
+        dist = 999
+        closest_area = AreaofInterest(x=-5000, y=5000, width=1, height=1)
+        for area in self.areas_of_interest:
+            _dist = distance(origin_area.x, origin_area.y, area.x, area.y)
+            if _dist < dist and (area.x, area.y) != (origin_area.x, origin_area.y):
+                dist = _dist
+                closest_area = area
+        return closest_area
+
+    def generate(self, castle_entrance):
         self.reset_grid()
+        self.areas_of_interest = []
 
         # Randomly populated grid
         self.populate_grid()
 
         # Iterate Cellular Automata Rules
         for i in range(self.pillar_iterations):
-            print("{0} iteration(s) of automata with pillars:".format(i + 1))
+            # print("{0} iteration(s) of automata with pillars:".format(i + 1))
             self.automata_iteration(make_pillars=1)
 
         # Iterate Modified Cellular Automata Rules to Add Walls
         for i in range(self.iterations):
-            print("{0} iteration(s) of regular automata:".format(i + 1))
+            # print("{0} iteration(s) of regular automata:".format(i + 1))
             self.automata_iteration(make_pillars=0)
 
         self.populate_grid(self.wall_chance / self.sparse_wall_density)
         self.flood_find_empty()
+        self.create_entrance_exit(castle_entrance)
         self.find_areas_if_interest()
+        self.ensure_path()
         """
         - self reminder to try checking map size 
         - https://stackoverflow.com/questions/1331471/in-memory-size-of-a-python-structure
@@ -78,6 +183,7 @@ class CellularAutomata:
         self.grid = new_grid
 
     def populate_grid(self, wall_chance=None):
+        print('populate_grid')
         if not wall_chance:
             wall_chance = self.wall_chance
 
@@ -86,6 +192,15 @@ class CellularAutomata:
             for j in range(len(self.grid[0])):
                 if randint(0, 100) <= wall_chance:  # test with list comprehension instead??
                     self.grid[i][j] = 1
+        """
+        bsp_x = 10
+        bsp_y = 15
+        bsp_width = 40
+        bsp_height = 30
+        """
+        # self.grid[10:50][15:30] = np.zeros_like(self.grid[10:50][15:30])
+        # for row in self.grid:
+        #     print(row)
             
     def automata_iteration(self, make_pillars):
         make_grid = [row[:] for row in self.grid]
@@ -141,6 +256,7 @@ class CellularAutomata:
 
         # Among All Possible Areas, Remove Close Areas
         radius = min(self.width // self.encounter_spread_factor, self.height // self.encounter_spread_factor)
+        possible_areas.extend([(self.start_area.x+1, self.start_area.y+1), (self.end_area.x+1, self.end_area.y+1)])
         areas = []
         while possible_areas:
             center_x, center_y = possible_areas.pop()
@@ -159,10 +275,12 @@ class CellularAutomata:
                         possible_areas.remove((x, y))
 
             # Finally Add to Final List
-            area = AreaofInterest(x=center_x-1, y=center_y-1, width=3, height=3)
-            areas.append(area)
-        self.areas_of_interest = areas
-        
+            areas.append((center_x-1, center_y-1))
+            # areas.append(AreaofInterest(x=center_x-1, y=center_y-1, width=3, height=3))
+        areas.remove((self.start_area.x, self.start_area.y))
+        areas.remove((self.end_area.x, self.end_area.y))
+        self.areas_of_interest.extend([AreaofInterest(x=center_x-1, y=center_y-1, width=3, height=3) for center_x, center_y in areas])
+
     def flood_find_empty(self):
         times_remade = 0
         percentage = 0
@@ -234,14 +352,21 @@ class AreaofInterest:
         y = self.y + self.height // 2
         return x, y
 
+    def obtain_point_within(self, padding):
+        return randint(self.x, self.x + self.width), randint(self.y, self.y + self.height)
+
+
+def distance(x1, y1, x2, y2):
+    return sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+
 
 if __name__ == "__main__":
     c = CellularAutomata()
-    c.width = 50
-    c.height = 50
+    c.width = 25
+    c.height = 25
     c.wall_chance = 40
     c.min_count = 5
-    c.iterations = 1
+    c.iterations = 2
     c.pillar_iterations = 1
     c.flood_tries = 5
     c.goal_percentage = 30  # above 30% seems to be a good target

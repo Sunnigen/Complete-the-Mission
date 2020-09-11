@@ -6,7 +6,7 @@ from RenderFunctions import RenderOrder
 
 
 def kill_player(player):
-    player.char = 37
+    player.char = "%"  # 37
     player.color = libtcod.dark_red
 
     # return 'You died!', GameStates.PLAYER_DEAD
@@ -17,7 +17,7 @@ def kill_mob(mob):
     # death_message = '%s is dead!' % mob.name.capitalize()
     death_message = Message('%s is dead!' % mob.name.capitalize(), libtcod.orange)
 
-    mob.char = 37
+    mob.char = "%"  # 37
     mob.color = libtcod.dark_red
     mob.blocks = False
     mob.fighter = None

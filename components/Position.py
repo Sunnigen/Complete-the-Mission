@@ -28,6 +28,8 @@ class Position:
         if not (game_map.is_blocked(self.x + dx, self.y + dy)) or not (game_map.tile_cost[self.x + dx][self.y + dy] >= 99):
             self.move(dx, dy)
 
+    # def move_evade(self, target_x, target_y, game_map, distance):
+
     def move_astar(self, target_x, target_y, game_map, diagonal_cost=1.41):
         # Astar Pathfinding to Obtain Optimal Path to Target
         astar = AStar(game_map.tile_cost, diagonal_cost)
@@ -39,7 +41,11 @@ class Position:
         return dijkstra_path
 
     def move_farthest(self, entities, game_map):
-        # Use Cost Map To Find Best Path Furthest From Target
+        # Use Localized Cost Map To Find Best Path Furthest From Target
+
+
+
+
         dijkstra_path = []
         return dijkstra_path
 

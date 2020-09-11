@@ -48,7 +48,7 @@ def heal(*args, **kwargs):
     if entity.fighter.hp >= entity.fighter.max_hp:
         results.append({'message': Message('But you don\'t feel any different.', tcod.yellow)})
     else:
-        entity.fighter.heal(amount)
+        entity.fighter.heal(entity.fighter.max_hp)
         results.append({'message': Message('Your wounds start to feel better.', tcod.green)})
 
     return results
@@ -69,7 +69,7 @@ def poison(*args, **kwargs):
 def cast_lightning(*args, **kwargs):
     caster = args[0]
     entities = kwargs.get('entities')
-    fov_map = kwargs.get('fov_map')
+    # fov_map = kwargs.get('fov_map')
     damage = kwargs.get('damage')
     game_map = kwargs.get("game_map")
     maximum_range = kwargs.get('maximum_range')
@@ -81,12 +81,12 @@ def cast_lightning(*args, **kwargs):
 
     # Search Closest Entity
     for entity in entities:
-        if entity.fighter and entity != caster and tcod.map_is_in_fov(fov_map, entity.position.x, entity.position.y):
+        if entity.fighter and entity != caster and (entity.position.x, entity.position.y) in caster.fighter.curr_fov_map:
             distance = caster.position.distance_to(entity.position.x, entity.position.y)
 
             if distance < closest_distance and caster.faction.check_enemy(entity.faction.faction_name):
-                    target = entity
-                    closest_distance = distance
+                target = entity
+                closest_distance = distance
 
     if target:
         lightning_astar_path = caster.position.move_astar(target.position.x, target.position.y, game_map, diagonal_cost=1.00)
@@ -121,8 +121,8 @@ def cast_fireball(*args, **kwargs):
     results = []
 
     # Tile not within range
-    if not tcod.map_is_in_fov(fov_map, target_x, target_y):
-        results.append({'consumed': False, 'message': Message('You cannot this area!', tcod.yellow)})
+    if not fov_map.fov[target_x][target_y]:
+        results.append({'consumed': False, 'message': Message('You cannot target this area!', tcod.yellow)})
         return results
 
     results.append({'consumed': True, 'message': Message('The fireball explodes, burning everything within %s tiles!' %

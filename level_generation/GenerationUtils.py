@@ -14,6 +14,7 @@ from components.Inventory import Inventory
 from components.Item import Item
 from components.Particle import Particle
 from components.Position import Position
+from components.SpellCaster import SpellCaster
 from level_generation.Prefab import Prefab
 from components.Stairs import Stairs
 from Entity import Entity
@@ -22,7 +23,7 @@ from GameMessages import Message
 # Do not remove ItemFunctions! There are called out in json and eval()'ed
 from ItemFunctions import *
 # from ItemFunctions import cast_confuse, cast_fireball, cast_lightning, heal,
-from loader_functions.JsonReader import obtain_item_table, obtain_mob_table, obtain_tile_set, obtain_particles
+from loader_functions.JsonReader import obtain_item_table, obtain_mob_table, obtain_tile_set, obtain_particles, obtain_spells
 from MapObjectFunctions import *
 from RandomUtils import random_choice_from_dict, spawn_chance
 from RenderFunctions import RenderOrder
@@ -32,6 +33,7 @@ TILE_SET = obtain_tile_set()
 ITEMS = obtain_item_table()
 MOBS = obtain_mob_table()
 PARTICLES = obtain_particles()
+SPELLS = obtain_spells()
 
 
 def calculate_distance(x1, y1, x2, y2):
@@ -112,11 +114,6 @@ def create_floor(game_map, x, y):
 
 
 def create_wall(game_map, x, y):
-    # close (1) Tile
-    # wall = TILE_SET['1']
-    # game_map.transparent[y][x] = wall.get('transparent')
-    # game_map.walkable[y][x] = wall.get('walkable')
-    # game_map.tiles[y][x] = wall.get('char')  # "#"
     place_tile(game_map, x, y, '1')
 
 
@@ -126,7 +123,6 @@ def place_tile(game_map, x, y, obj):
     game_map.transparent[y][x] = tile.get('transparent')
     game_map.fov[y][x] = tile.get('fov')
     game_map.walkable[y][x] = tile.get('walkable')
-    # game_map.char_tiles[y][x] = tile.get('char')
     game_map.tileset_tiles[y][x] = int(obj)
     game_map.tile_cost[y][x] = tile.get('tile_cost')
 
@@ -180,11 +176,22 @@ def generate_mob(x, y, mob_stats, mob_index, encounter_group, faction, ai, entit
                  follow_entity=None, target_entity=None, origin_x=None, origin_y=None):
 
     faction_component = Faction(faction_name=faction)
-    inventory_component = Inventory(26)
+    inventory_component = Inventory(3)
     equipment_component = Equipment()
+
     fighter_component = Fighter(hp=mob_stats.get('hp'), defense=mob_stats.get('def'),
                                 power=mob_stats.get('att'), xp=mob_stats.get('xp'), fov_range=mob_stats.get('fov_range'),
-                                mob_level=mob_stats.get('mob_level'))
+                                mob_level=mob_stats.get('mob_level'), attack_range=mob_stats.get('attack_range', 0.99))
+
+    # Check if Mob Has Skills or Spells
+    spells = mob_stats.get("spells", None)
+    if spells:
+        spell_data_list = []
+        for spell_name in spells:
+            spell_data_list.append(SPELLS.get(spell_name))
+        spellcaster_component = SpellCaster(spell_data=spell_data_list)
+    else:
+        spellcaster_component = None
 
     if origin_x and origin_y:
         ai_component = ai(encounter=encounter_group, origin_x=origin_x, origin_y=origin_y, follow_entity=follow_entity,
@@ -194,10 +201,10 @@ def generate_mob(x, y, mob_stats, mob_index, encounter_group, faction, ai, entit
                           target_entity=target_entity)
 
     position_component = Position(x, y)
-    mob_entity = Entity(mob_stats.get('char'), mob_stats.get('color'), mob_stats.get('name'), mob_index, position=position_component,
+    mob_entity = Entity(mob_stats.get('glyph'), mob_stats.get('color'), mob_stats.get('name'), mob_index, position=position_component,
                         blocks=True, fighter=fighter_component, render_order=RenderOrder.ACTOR,
                         ai=ai_component, faction=faction_component, equipment=equipment_component,
-                        inventory=inventory_component, dialogue=dialogue_component)
+                        inventory=inventory_component, spellcaster=spellcaster_component, dialogue=dialogue_component)
 
     # Add/Equip Inventory
     mob_inventory = mob_stats.get("inventory", [])
@@ -268,7 +275,7 @@ def generate_object(x, y, entities, map_objects, particles, game_map, object_sta
                                          interact_function=eval(object_stats.get('interact_function', "no_function")),
                                          wait_function=eval(object_stats.get("wait_function", "no_function")))
         position_component = Position(x, y)
-        map_object_entity = Entity(object_stats.get('char'), object_stats.get('color'), object_stats.get('name'),
+        map_object_entity = Entity(object_stats.get('glyph'), object_stats.get('color'), object_stats.get('name'),
                                    json_index=object_index, position=position_component, render_order=RenderOrder.ITEM, furniture=map_object_component,
                                    inventory=inventory_component)
         # TODO: Directly Add to Game Map, might have to change
@@ -302,14 +309,14 @@ def _generate_random_items(number_of_items, dungeon_level):
                                   description=item_stats.get('description')
                                   )
 
-            item_entity = Entity(item_stats.get('char'), item_stats.get('color'), item_stats.get('name'),
+            item_entity = Entity(item_stats.get('glyph'), item_stats.get('color'), item_stats.get('name'),
                                  item_index, render_order=RenderOrder.ITEM, item=item_component)
 
         elif item_stats.get('type') == 'reuseable':
             item_component = Item(use_function=eval(item_stats.get('use_function', "nothing")), name=item_stats.get('name'),
                                   text=item_stats.get('text'), description=item_stats.get('description'))
 
-            item_entity = Entity(item_stats.get('char'), item_stats.get('color'), item_stats.get('name'),
+            item_entity = Entity(item_stats.get('glyph'), item_stats.get('color'), item_stats.get('name'),
                                  item_index, render_order=RenderOrder.ITEM, item=item_component,
                                  )
 
@@ -320,7 +327,7 @@ def _generate_random_items(number_of_items, dungeon_level):
                                               description=item_stats.get('description')
                                               )
 
-            item_entity = Entity(item_stats.get('char'), item_stats.get('color'), item_stats.get('name'),
+            item_entity = Entity(item_stats.get('glyph'), item_stats.get('color'), item_stats.get('name'),
                                  item_index, equippable=equippable_component)
         item_entities.append(item_entity)
 
@@ -361,7 +368,7 @@ def generate_objects(entities, map_objects, game_map, room, number_of_objects, o
                                             breakable=breakable, walkable=walkable, properties=properties,
                                             interact_function=eval(object_stats.get('interact_function')))
             position_component = Position(x, y)
-            object_entity = Entity(object_stats.get('char'), object_stats.get('color'), object_stats.get('name'),
+            object_entity = Entity(object_stats.get('glyph'), object_stats.get('color'), object_stats.get('name'),
                                    json_index=object_index, position=position_component, render_order=RenderOrder.ITEM, furniture=furniture_component,
                                    inventory=inventory_component)
 
@@ -447,7 +454,7 @@ def create_item_entity(item_index, x=None, y=None):
                               description=item_stats.get('description')
                               )
 
-        item_entity = Entity(item_stats.get('char'), item_stats.get('color'), item_stats.get('name'),
+        item_entity = Entity(item_stats.get('glyph'), item_stats.get('color'), item_stats.get('name'),
                              json_index=item_index, position=position_component, render_order=RenderOrder.ITEM,
                              item=item_component)
 
@@ -455,7 +462,7 @@ def create_item_entity(item_index, x=None, y=None):
         item_component = Item(use_function=eval(item_stats.get('use_function', "nothing")), name=item_stats.get('name'),
                               text=item_stats.get('text'), description=item_stats.get('description'))
 
-        item_entity = Entity(item_stats.get('char'), item_stats.get('color'), item_stats.get('name'),
+        item_entity = Entity(item_stats.get('glyph'), item_stats.get('color'), item_stats.get('name'),
                              position=position_component, json_index=item_index, render_order=RenderOrder.ITEM,
                              item=item_component,
                              )
@@ -467,7 +474,7 @@ def create_item_entity(item_index, x=None, y=None):
                                           description=item_stats.get('description')
                                           )
 
-        item_entity = Entity(item_stats.get('char'), item_stats.get('color'), item_stats.get('name'),
+        item_entity = Entity(item_stats.get('glyph'), item_stats.get('color'), item_stats.get('name'),
                              position=position_component, render_order=RenderOrder.ITEM, json_index=item_index,
                              equippable=equippable_component)
     else:
@@ -485,15 +492,26 @@ def generate_items(entities, game_map, room, number_of_items, item_chances, item
 
         # Ensure another Entity doesn't already Exist in same coordinates
         # _entities = [entity for entity in entities if entity.position]
-        if not any([entity for entity in entities if entity.position.x == x and entity.position.y == y]) and \
-                game_map.is_within_map(x, y) and not game_map.is_blocked(x, y):
+        try:
+            if not any([entity for entity in entities if entity.position.x == x and entity.position.y == y]) and \
+                    game_map.is_within_map(x, y) and not game_map.is_blocked(x, y):
 
-            # Randomly Select an Item to Spawn
-            item_index = random_choice_from_dict(item_chances)
-            item_entity = create_item_entity(item_index, x, y)
+                # Randomly Select an Item to Spawn
+                item_index = random_choice_from_dict(item_chances)
+                item_entity = create_item_entity(item_index, x, y)
 
-            item_list.append(item_entity)
-            entities.append(item_entity)
+                item_list.append(item_entity)
+                entities.append(item_entity)
+        except AttributeError as e:
+            import traceback
+            print('\n\n')
+            print(traceback.format_exc())
+            for e in entities:
+                print(e)
+
+            # file_name =
+            # with
+
     return item_list
 
 
@@ -505,7 +523,7 @@ def create_mob_entity(x, y, mob_index, encounter, ai_type=AI, faction_name="Mind
                                 mob_level=mob_stats.get('mob_level'))
     ai_component = ai_type(encounter=encounter, origin_x=x, origin_y=y)
     position_component = Position(x, y)
-    mob_entity = Entity(mob_stats.get('char'), mob_stats.get('color'), mob_stats.get('name'), json_index=mob_index,
+    mob_entity = Entity(mob_stats.get('glyph'), mob_stats.get('color'), mob_stats.get('name'), json_index=mob_index,
                         position=position_component, blocks=True, fighter=fighter_component,
                         render_order=RenderOrder.ACTOR, ai=ai_component, faction=faction_component)
     return mob_entity
@@ -515,7 +533,7 @@ def generate_particle(x, y, particle_index):
     p_stats = PARTICLES.get(particle_index)
     p_name = p_stats.get("name")
     p_lifetime = p_stats.get("lifetime")
-    p_char = p_stats.get("char")
+    p_char = p_stats.get("glyph")
     p_fg = p_stats.get("fg")
     p_bg = p_stats.get("bg")
     p_propagate = p_stats.get("propagate", False)
@@ -531,28 +549,32 @@ def generate_particle(x, y, particle_index):
     return particle_entity
 
 
-def generate_mobs(entities, game_map, number_of_mobs, monster_chances, mob_table, encounter_type, encounter, room=None, x=None, y=None):
+def generate_mobs(entities, game_map, number_of_mobs, mobs, monster_chances, encounter, room=None, x=None, y=None):
 
     monster_list = []
-
+    MOBS = mobs
     for i in range(number_of_mobs):
         # Choose A Random Location Within the Room
         if room:
             x, y = room.obtain_point_within(2)
 
+
         # Ensure another Entity doesn't already Exist in same coordinates
         # _entities = [entity for entity in entities if entity.position]
-        if not any([entity for entity in entities if entity.position.x == x and entity.position.y == y]) and \
-                game_map.is_within_map(x, y) and not game_map.is_blocked(x, y):
+        try:
+            if not any([entity for entity in entities if entity.position.x == x and entity.position.y == y]) and \
+                    game_map.is_within_map(x, y) and not game_map.is_blocked(x, y):
 
-            mob_index = random_choice_from_dict(monster_chances)
-            mob_stats = MOBS.get(mob_index)
-            faction = "Mindless"
-            ai = AI
-            mob_entity = generate_mob(x, y, mob_stats, mob_index, encounter, faction, ai, entities)
+                mob_index = random_choice_from_dict(monster_chances)
+                mob_stats = MOBS.get(mob_index)
+                faction = "Mindless"
+                ai = AI
+                mob_entity = generate_mob(x, y, mob_stats, mob_index, encounter, faction, ai, entities)
 
-            entities.append(mob_entity)
-            monster_list.append(mob_entity)
+                entities.append(mob_entity)
+                monster_list.append(mob_entity)
+        except:
+            print(entities)
 
     return monster_list
 
@@ -598,8 +620,8 @@ def place_entities(game_map, dungeon_level, room, entities, item_table, mob_tabl
     # furniture_list = generate_objects(entities, game_map.map_objects, game_map, room, 5, object_chances, object_table)
 
     # Generate Monsters
-    encounter.mob_list = generate_mobs(entities, game_map, number_of_mobs, monster_chances, mob_table, encounter_type,
-                                       encounter, room=room)
+    # def generate_mobs(entities, game_map, number_of_mobs, mobs, monster_chances, encounter, room=None, x=None, y=None):
+    encounter.mob_list = generate_mobs(entities, game_map, number_of_mobs, mob_table, monster_chances, encounter, room=room)
     # Generate Items
     item_list = generate_items(entities, game_map, room, number_of_items, item_chances, item_table)
     encounter.item_list = item_list

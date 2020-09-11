@@ -2,6 +2,21 @@ import json
 import os
 
 
+def obtain_json_data(file_name=''):
+    if file_name:
+        file = "{}\\assets\\{}.json".format(os.getcwd(), file_name)
+    else:
+        file = "%s\\assets\\mobs.json" % os.getcwd()
+    if not os.path.isfile(file):
+        print('Cannot find %s!!!' % file)
+        raise FileNotFoundError
+
+    with open(file, "r", encoding="utf8") as read_file:
+        data = json.load(read_file)
+
+    return data
+
+
 def obtain_mob_table(file_name=''):
     if file_name:
         mob_file = "{}\\assets\\{}.json".format(os.getcwd(), file_name)
@@ -84,3 +99,16 @@ def obtain_particles(key_word=''):
         particle_file = json.load(read_file)
 
     return particle_file
+
+
+def obtain_spells(key_word=''):
+    spell_file = "%s\\assets\\spells.json" % os.getcwd()
+
+    if not os.path.isfile(spell_file):
+        print('Cannot locate %s!!!' % spell_file)
+        raise FileNotFoundError
+
+    with open(spell_file, "r", encoding="utf8") as read_file:
+        spell_file = json.load(read_file)
+
+    return spell_file

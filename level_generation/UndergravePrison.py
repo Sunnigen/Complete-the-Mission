@@ -52,15 +52,14 @@ class UndergravePrison(BinarySpacePartition):
 
         # Generate Loot/Enemy Table
         if self.dungeon_level == 1:
-            self.possible_rooms['rare'] = ['armory', 'armory', 'armory']
+
             # self.possible_rooms['uncommon'] = ['armory', 'supply_room']
             self.pre_load_map(entities, particles)
 
         elif self.dungeon_level == 5:
             # self.possible_rooms['rare'] = ['kitchen','office', 'alarm_room', 'torture_room', 'portal_room', 'hard_monster_room',
             #                                'guard_dormitory']
-            self.possible_rooms['rare'] = ['armory', 'armory', 'armory']
-            self.possible_rooms['uncommon'] = ['armory', 'supply_room']
+
             self.pre_load_map(entities, particles)
 
         # elif self.dungeon_level == 5:
@@ -123,6 +122,7 @@ class UndergravePrison(BinarySpacePartition):
 
     def pre_load_map(self, entities, particles):
         if self.dungeon_level == 1:
+            self.possible_rooms['rare'] = ['armory', 'alarm_room']
             self.width = 50
             self.height = 50
             self.initialize_grid()
@@ -182,8 +182,8 @@ class UndergravePrison(BinarySpacePartition):
             self.assign_terrain(entities, particles)
 
             # Place Player/Stairs
-            # self.game_map.player.position.x, self.game_map.player.position.y = (2, 14)
-            self.game_map.player.position.x, self.game_map.player.position.y = (40, 14)
+            self.game_map.player.position.x, self.game_map.player.position.y = (2, 14)
+            # self.game_map.player.position.x, self.game_map.player.position.y = (40, 14)
             self.game_map.tile_cost[self.game_map.player.position.y][self.game_map.player.position.x] = 99
 
             place_stairs(self.game_map, self.dungeon_level, 44, 14)
@@ -242,8 +242,9 @@ class UndergravePrison(BinarySpacePartition):
                                    ai_type=DefensiveAI, area_of_interest=self.end_room, origin_x=origin_x, origin_y=origin_y)
             self.game_map.game_events.append(game_event)
 
-
         if self.dungeon_level == 5:
+            self.possible_rooms['rare'] = ['armory', 'armory', 'armory']
+            self.possible_rooms['uncommon'] = ['armory', 'supply_room']
             self.width = 50
             self.height = 50
             self.initialize_grid()

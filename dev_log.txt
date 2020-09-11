@@ -1,0 +1,22 @@
+09-07-2020
+ - Displayed Story-Driven Event Messages at the beginning of every level - Done
+ - Enable multi-attack - Done
+ - Add plagued enemies and terrain to Resinfaire Forest 2 - Done
+    - Plagued Wolf, Plagued Goblin
+    - Moldy Grass, Fungi Tree
+ - Work out 3rd level of abandoned town with forest entrance and exit to castle - Done
+ - Declare map width/height within GameMap.make_map() - Done
+ - Fixed River Gen x/y coordinates for Resinfaire Forest - Done
+ - Healing potions heal max hp - Done
+ - Enable bridges across unpassable rivers - Done
+
+ 09-08-2020
+ - 3rd Level Town Gen
+    - Create town center
+    - Roads to most of each building
+    - Rivers do not make impassable Terrain
+    - Big road leading to castle entrance from town center
+    - Populated Ruined Buildings
+        - Emulate 2nd Floor
+    - Inhabited Buildings
+        - Emulate Separate Inhabited Buildings

@@ -1,5 +1,4 @@
-
-# !/usr/bin/env python3
+#!/usr/bin/env python3
 """
 This code demonstrates various usages of python-tcod.
 """
@@ -17,16 +16,28 @@ import warnings
 
 import numpy as np
 import tcod
-import tcod.event
 
 if not sys.warnoptions:
     warnings.simplefilter("default")  # Show all warnings.
+
+
+def get_data(path: str) -> str:
+    """Return the path to a resource in the libtcod data directory,"""
+    SCRIPT_DIR = os.path.dirname(__file__)
+    DATA_DIR = os.path.join(SCRIPT_DIR, "C:\\Python37x86\\projects\\CtM\\data")
+    assert os.path.exists(DATA_DIR), (
+        "Data directory is missing,"
+        " did you forget to run `git submodule update --init`?"
+    )
+    return os.path.join(DATA_DIR, path)
+
 
 SAMPLE_SCREEN_WIDTH = 46
 SAMPLE_SCREEN_HEIGHT = 20
 SAMPLE_SCREEN_X = 20
 SAMPLE_SCREEN_Y = 10
-FONT = "data/fonts/consolas10x10_gs_tc.png"
+FONT = "level_generation/dejavu_wide16x16_gs_tc.png"
+# FONT = get_data("fonts/dejavu10x10_gs_tc.png")
 
 root_console = None
 sample_console = tcod.console.Console(
@@ -55,8 +66,8 @@ class Sample(tcod.event.EventDispatch):
             SAMPLES[cur_sample].on_enter()
             draw_samples_menu()
         elif (
-                event.sym == tcod.event.K_RETURN
-                and event.mod & tcod.event.KMOD_LALT
+            event.sym == tcod.event.K_RETURN
+            and event.mod & tcod.event.KMOD_LALT
         ):
             tcod.console_set_fullscreen(not tcod.console_is_fullscreen())
         elif event.sym == tcod.event.K_PRINTSCREEN or event.sym == ord("p"):
@@ -108,7 +119,7 @@ class TrueColorSample(Sample):
 
         # shift picked color channels in the direction of slide_dir
         self.colors[self.corners, rand_channels] += (
-                self.slide_dir[self.corners, rand_channels] * 5
+            self.slide_dir[self.corners, rand_channels] * 5
         )
 
         # reverse slide_dir values when limits are reached
@@ -143,7 +154,7 @@ class TrueColorSample(Sample):
             width=sample_console.width - 2,
             height=sample_console.height - 1,
             string="The Doryen library uses 24 bits colors, for both "
-                   "background and foreground.",
+            "background and foreground.",
             fg=tcod.white,
             bg=tcod.grey,
             bg_blend=tcod.BKGND_MULTIPLY,
@@ -223,6 +234,7 @@ class OffscreenConsoleSample(Sample):
 
 
 class LineDrawingSample(Sample):
+
     FLAG_NAMES = [
         "BKGND_NONE",
         "BKGND_SET",
@@ -251,8 +263,8 @@ class LineDrawingSample(Sample):
         self.bk.bg[:, :, 0] = np.linspace(0, 255, self.bk.width)[:, np.newaxis]
         self.bk.bg[:, :, 2] = np.linspace(0, 255, self.bk.height)
         self.bk.bg[:, :, 1] = (
-                                      self.bk.bg[:, :, 0].astype(int) + self.bk.bg[:, :, 2]
-                              ) / 2
+            self.bk.bg[:, :, 0].astype(int) + self.bk.bg[:, :, 2]
+        ) / 2
         self.bk.ch[:] = ord(" ")
 
     def ev_keydown(self, event: tcod.event.KeyDown):
@@ -307,8 +319,8 @@ class LineDrawingSample(Sample):
         # in python the easiest way is to use the line iterator
         for x, y in tcod.line_iter(xo, yo, xd, yd):
             if (
-                    0 <= x < sample_console.width
-                    and 0 <= y < sample_console.height
+                0 <= x < sample_console.width
+                and 0 <= y < sample_console.height
             ):
                 tcod.console_set_char_background(
                     sample_console, x, y, tcod.light_blue, self.bk_flag
@@ -399,8 +411,8 @@ class NoiseSample(Sample):
             bg=tcod.grey,
             bg_blend=tcod.BKGND_MULTIPLY,
         )
-        sample_console.fg[2: 2 + rectw, 2: 2 + recth] = (
-                sample_console.fg[2: 2 + rectw, 2: 2 + recth] * tcod.grey / 255
+        sample_console.fg[2 : 2 + rectw, 2 : 2 + recth] = (
+            sample_console.fg[2 : 2 + rectw, 2 : 2 + recth] * tcod.grey / 255
         )
 
         for curfunc in range(len(self.NOISE_OPTIONS)):
@@ -526,31 +538,26 @@ class FOVSample(Sample):
     def __init__(self):
         self.name = "Field of view"
 
-        self.px = 20
-        self.py = 10
-        self.recompute = True
+        self.player_x = 20
+        self.player_y = 10
         self.torch = False
-        self.map = None
-        self.noise = None
-        self.torchx = 0.0
         self.light_walls = True
         self.algo_num = 0
-        # 1d noise for the torch flickering
-        self.noise = tcod.noise_new(1, 1.0, 1.0)
+        self.noise = tcod.noise.Noise(1)  # 1D noise for the torch flickering.
 
-        self.map = tcod.map.Map(
-            SAMPLE_SCREEN_WIDTH, SAMPLE_SCREEN_HEIGHT, order="F"
-        )
-        self.map.walkable[:] = SAMPLE_MAP[:] == " "
-        self.map.transparent[:] = self.map.walkable[:] | (SAMPLE_MAP == "=")
+        map_shape = (SAMPLE_SCREEN_WIDTH, SAMPLE_SCREEN_HEIGHT)
 
-        self.light_map_bg = np.full(
-            SAMPLE_MAP.shape + (3,), LIGHT_GROUND, dtype=np.uint8
-        )
+        self.walkable = np.zeros(map_shape, dtype=bool, order="F")
+        self.walkable[:] = SAMPLE_MAP[:] == " "
+
+        self.transparent = np.zeros(map_shape, dtype=bool, order="F")
+        self.transparent[:] = self.walkable[:] | (SAMPLE_MAP == "=")
+
+        # Lit background colors for the map.
+        self.light_map_bg = np.full(SAMPLE_MAP.shape, LIGHT_GROUND, dtype="3B")
         self.light_map_bg[SAMPLE_MAP[:] == "#"] = LIGHT_WALL
-        self.dark_map_bg = np.full(
-            SAMPLE_MAP.shape + (3,), DARK_GROUND, dtype=np.uint8
-        )
+        # Dark background colors for the map.
+        self.dark_map_bg = np.full(SAMPLE_MAP.shape, DARK_GROUND, dtype="3B")
         self.dark_map_bg[SAMPLE_MAP[:] == "#"] = DARK_WALL
 
     def draw_ui(self):
@@ -572,64 +579,64 @@ class FOVSample(Sample):
 
     def on_enter(self):
         tcod.sys_set_fps(60)
-        # we draw the foreground only the first time.
-        #  during the player movement, only the @ is redrawn.
-        #  the rest impacts only the background color
-        # draw the help text & player @
-        sample_console.clear()
-        self.draw_ui()
-        tcod.console_put_char(
-            sample_console, self.px, self.py, "@", tcod.BKGND_NONE
-        )
-        # draw windows
-        sample_console.ch[np.where(SAMPLE_MAP == "=")] = tcod.CHAR_DHLINE
-        sample_console.fg[np.where(SAMPLE_MAP == "=")] = tcod.black
 
     def on_draw(self):
-        dx = 0.0
-        dy = 0.0
-        di = 0.0
-        if self.recompute:
-            self.recompute = False
-            self.map.compute_fov(
-                self.px,
-                self.py,
-                TORCH_RADIUS if self.torch else 0,
-                self.light_walls,
-                self.algo_num,
-            )
-        sample_console.bg[:] = self.dark_map_bg[:]
-        if self.torch:
-            # slightly change the perlin noise parameter
-            self.torchx += 0.1
-            # randomize the light position between -1.5 and 1.5
-            tdx = [self.torchx + 20.0]
-            dx = tcod.noise_get(self.noise, tdx, tcod.NOISE_SIMPLEX) * 1.5
-            tdx[0] += 30.0
-            dy = tcod.noise_get(self.noise, tdx, tcod.NOISE_SIMPLEX) * 1.5
-            di = 0.2 * tcod.noise_get(
-                self.noise, [self.torchx], tcod.NOISE_SIMPLEX
-            )
-            # where_fov = np.where(self.map.fov[:])
-            mgrid = np.mgrid[:SAMPLE_SCREEN_WIDTH, :SAMPLE_SCREEN_HEIGHT]
-            # get squared distance
-            light = (mgrid[0] - self.px + dx) ** 2 + (
-                    mgrid[1] - self.py + dy
-            ) ** 2
-            light = light.astype(np.float16)
-            visible = (light < SQUARED_TORCH_RADIUS) & self.map.fov[:]
-            light[...] = SQUARED_TORCH_RADIUS - light
-            light[...] /= SQUARED_TORCH_RADIUS
-            light[...] += di
-            light[...] = light.clip(0, 1)
-            light[~visible] = 0
+        sample_console.clear()
+        # Draw the help text & player @.
+        self.draw_ui()
+        sample_console.print(self.player_x, self.player_y, "@")
+        # Draw windows.
+        sample_console.tiles_rgb["ch"][SAMPLE_MAP == "="] = tcod.CHAR_DHLINE
+        sample_console.tiles_rgb["fg"][SAMPLE_MAP == "="] = tcod.black
 
-            sample_console.bg[...] = (
-                                             self.light_map_bg.astype(np.float16) - self.dark_map_bg
-                                     ) * light[..., np.newaxis] + self.dark_map_bg
+        # Get a 2D boolean array of visible cells.
+        fov = tcod.map.compute_fov(
+            transparency=self.transparent,
+            pov=(self.player_x, self.player_y),
+            radius=TORCH_RADIUS if self.torch else 0,
+            light_walls=self.light_walls,
+            algorithm=self.algo_num,
+        )
+
+        if self.torch:
+            # Derive the touch from noise based on the current time.
+            torch_t = time.perf_counter() * 5
+            # Randomize the light position between -1.5 and 1.5
+            torch_x = self.player_x + self.noise.get_point(torch_t) * 1.5
+            torch_y = self.player_y + self.noise.get_point(torch_t + 11) * 1.5
+            # Extra light brightness.
+            brightness = 0.2 * self.noise.get_point(torch_t + 17)
+
+            # Get the squared distance using a mesh grid.
+            x, y = np.mgrid[:SAMPLE_SCREEN_WIDTH, :SAMPLE_SCREEN_HEIGHT]
+            # Center the mesh grid on the torch position.
+            x = x.astype(np.float32) - torch_x
+            y = y.astype(np.float32) - torch_y
+
+            distance_squared = x ** 2 + y ** 2  # 2D squared distance array.
+
+            # Get the currently visible cells.
+            visible = (distance_squared < SQUARED_TORCH_RADIUS) & fov
+
+            # Invert the values, so that the center is the 'brightest' point.
+            light = SQUARED_TORCH_RADIUS - distance_squared
+            light /= SQUARED_TORCH_RADIUS  # Convert into non-squared distance.
+            light += brightness  # Add random brightness.
+            light.clip(0, 1, out=light)  # Clamp values in-place.
+            light[~visible] = 0  # Set non-visible areas to darkness.
+
+            # Setup background colors for floating point math.
+            light_bg = self.light_map_bg.astype(np.float16)
+            dark_bg = self.dark_map_bg.astype(np.float16)
+
+            # Linear interpolation between colors.
+            sample_console.tiles_rgb["bg"] = (
+                dark_bg + (light_bg - dark_bg) * light[..., np.newaxis]
+            )
         else:
-            where_fov = np.where(self.map.fov[:])
-            sample_console.bg[where_fov] = self.light_map_bg[where_fov]
+            sample_console.bg[...] = np.where(
+                fov[:, :, np.newaxis], self.light_map_bg, self.dark_map_bg
+            )
 
     def ev_keydown(self, event: tcod.event.KeyDown):
         MOVE_KEYS = {
@@ -638,32 +645,24 @@ class FOVSample(Sample):
             ord("k"): (0, 1),
             ord("l"): (1, 0),
         }
-        FOV_SELECT_KEYS = {ord("-"): -1, ord("="): 1}
+        FOV_SELECT_KEYS = {
+            ord("-"): -1,
+            ord("="): 1,
+            tcod.event.K_KP_MINUS: -1,
+            tcod.event.K_KP_PLUS: 1,
+        }
         if event.sym in MOVE_KEYS:
             x, y = MOVE_KEYS[event.sym]
-            if SAMPLE_MAP[self.px + x, self.py + y] == " ":
-                tcod.console_put_char(
-                    sample_console, self.px, self.py, " ", tcod.BKGND_NONE
-                )
-                self.px += x
-                self.py += y
-                tcod.console_put_char(
-                    sample_console, self.px, self.py, "@", tcod.BKGND_NONE
-                )
-                self.recompute = True
+            if self.walkable[self.player_x + x, self.player_y + y]:
+                self.player_x += x
+                self.player_y += y
         elif event.sym == ord("t"):
             self.torch = not self.torch
-            self.draw_ui()
-            self.recompute = True
         elif event.sym == ord("w"):
             self.light_walls = not self.light_walls
-            self.draw_ui()
-            self.recompute = True
         elif event.sym in FOV_SELECT_KEYS:
             self.algo_num += FOV_SELECT_KEYS[event.sym]
             self.algo_num %= tcod.NB_FOV_ALGORITHMS
-            self.draw_ui()
-            self.recompute = True
         else:
             super().ev_keydown(event)
 
@@ -740,7 +739,16 @@ class PathfindingSample(Sample):
                     for x in range(SAMPLE_SCREEN_WIDTH):
                         d = tcod.dijkstra_get_distance(self.dijk, x, y)
                         if d > self.dijk_dist:
-                            self.dijk4444char_background(
+                            self.dijk_dist = d
+                # compute path from px,py to dx,dy
+                tcod.dijkstra_path_set(self.dijk, self.dx, self.dy)
+            self.recalculate = False
+            self.busy = 0.2
+        # draw the dungeon
+        for y in range(SAMPLE_SCREEN_HEIGHT):
+            for x in range(SAMPLE_SCREEN_WIDTH):
+                if SAMPLE_MAP[x, y] == "#":
+                    tcod.console_set_char_background(
                         sample_console, x, y, DARK_WALL, tcod.BKGND_SET
                     )
                 else:
@@ -864,9 +872,9 @@ class PathfindingSample(Sample):
         mx = event.tile.x - SAMPLE_SCREEN_X
         my = event.tile.y - SAMPLE_SCREEN_Y
         if (
-                0 <= mx < SAMPLE_SCREEN_WIDTH
-                and 0 <= my < SAMPLE_SCREEN_HEIGHT
-                and (self.dx != mx or self.dy != my)
+            0 <= mx < SAMPLE_SCREEN_WIDTH
+            and 0 <= my < SAMPLE_SCREEN_HEIGHT
+            and (self.dx != mx or self.dy != my)
         ):
             tcod.console_put_char(
                 sample_console, self.dx, self.dy, self.oldchar, tcod.BKGND_NONE
@@ -1099,9 +1107,9 @@ class ImageSample(Sample):
     def __init__(self):
         self.name = "Image toolkit"
 
-        self.img = tcod.image_load("data/img/skull.png")
+        self.img = tcod.image_load(get_data("img/skull.png"))
         self.img.set_key_color(tcod.black)
-        self.circle = tcod.image_load("data/img/circle.png")
+        self.circle = tcod.image_load(get_data("img/circle.png"))
 
     def on_enter(self):
         tcod.sys_set_fps(0)
@@ -1234,9 +1242,9 @@ class NameGeneratorSample(Sample):
     def on_draw(self):
         if self.nbsets == 0:
             # parse all *.cfg files in data/namegen
-            for file in os.listdir("data/namegen"):
+            for file in os.listdir(get_data("namegen")):
                 if file.find(".cfg") > 0:
-                    tcod.namegen_parse(os.path.join("data/namegen", file))
+                    tcod.namegen_parse(get_data(os.path.join("namegen", file)))
             # get the sets list
             self.sets = tcod.namegen_get_sets()
             print(self.sets)
@@ -1417,8 +1425,8 @@ class FastRenderSample(Sample):
 
         # create new light source
         if (
-                random.random() <= time_delta * LIGHTS_CHANCE
-                and len(lights) < MAX_LIGHTS
+            random.random() <= time_delta * LIGHTS_CHANCE
+            and len(lights) < MAX_LIGHTS
         ):
             x = random.uniform(-0.5, 0.5)
             y = random.uniform(-0.5, 0.5)
@@ -1447,9 +1455,9 @@ class FastRenderSample(Sample):
             # and strength, then calculate brightness of each pixel with
             # inverse square distance law
             light_brightness = (
-                    LIGHT_BRIGHTNESS
-                    * light.strength
-                    * (1.0 - light.z / TEX_STRETCH)
+                LIGHT_BRIGHTNESS
+                * light.strength
+                * (1.0 - light.z / TEX_STRETCH)
             )
             brightness = light_brightness / ((xc - xl) ** 2 + (yc - yl) ** 2)
 
@@ -1510,12 +1518,12 @@ def main():
         FONT, tcod.FONT_TYPE_GREYSCALE | tcod.FONT_LAYOUT_TCOD
     )
     root_console = tcod.console_init_root(
-        80, 50, "python-tcod samples", False, tcod.RENDERER_SDL2, #order="F"
+        80, 50, "python-tcod samples", False, tcod.RENDERER_SDL2, order="F"
     )
     credits_end = False
     SAMPLES[cur_sample].on_enter()
-    # draw_samples_menu()
-    # draw_renderer_menu()
+    draw_samples_menu()
+    draw_renderer_menu()
 
     while not tcod.console_is_window_closed():
         root_console.clear()
