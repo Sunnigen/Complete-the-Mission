@@ -85,7 +85,7 @@ def get_constants():
         'top_gui_height': top_gui_height,
         'top_gui_y': top_gui_y,
         'side_panel_height': side_panel_height,
-        'side_panel_width':side_panel_width
+        'side_panel_width': side_panel_width
     }
 
     return constants
@@ -99,7 +99,7 @@ def get_game_variables(constants, level=None):
     equipment_component = Equipment()
     faction_component = Faction(faction_name='Player')
     position_component = Position(0, 0)
-    player = Entity("@", (191, 171, 143), 'Player', "player", blocks=True, render_order=RenderOrder.ACTOR, position=position_component,
+    player = Entity("@", (95, 75, 47), 'Player', "player", blocks=True, render_order=RenderOrder.ACTOR, position=position_component,
                     fighter=fighter_component, inventory=inventory_component, level=level_component,
                     equipment=equipment_component, faction=faction_component)
     entities = [player]

@@ -189,6 +189,7 @@ def generate_mob(x, y, mob_stats, mob_index, encounter_group, faction, ai, entit
         spell_data_list = []
         for spell_name in spells:
             spell_data_list.append(SPELLS.get(spell_name))
+        print('name:', mob_stats.get("name"))
         spellcaster_component = SpellCaster(spell_data=spell_data_list)
     else:
         spellcaster_component = None
@@ -488,7 +489,13 @@ def create_item_entity(item_index, x=None, y=None):
 def generate_items(entities, game_map, room, number_of_items, item_chances, item_table):
     item_list = []
     for i in range(number_of_items):
-        x, y = room.obtain_point_within(2)
+        if room:
+            check_func = getattr(room, "obtain_point_within", None)
+            if callable(check_func):
+                x, y = room.obtain_point_within(2)
+            else:
+                x = randint(room.x, room.x + room.width)
+                y = randint(room.y, room.y + room.height)
 
         # Ensure another Entity doesn't already Exist in same coordinates
         # _entities = [entity for entity in entities if entity.position]
@@ -501,7 +508,10 @@ def generate_items(entities, game_map, room, number_of_items, item_chances, item
                 item_entity = create_item_entity(item_index, x, y)
 
                 item_list.append(item_entity)
-                entities.append(item_entity)
+
+                # Don't Add Item to Entity List if No Position
+                if item_entity.position:
+                    entities.append(item_entity)
         except AttributeError as e:
             import traceback
             print('\n\n')
@@ -556,25 +566,29 @@ def generate_mobs(entities, game_map, number_of_mobs, mobs, monster_chances, enc
     for i in range(number_of_mobs):
         # Choose A Random Location Within the Room
         if room:
-            x, y = room.obtain_point_within(2)
+            check_func = getattr(room, "obtain_point_within", None)
+            if callable(check_func):
+                x, y = room.obtain_point_within(2)
+            else:
+                x = randint(room.x, room.x + room.width)
+                y = randint(room.y, room.y + room.height)
 
 
         # Ensure another Entity doesn't already Exist in same coordinates
         # _entities = [entity for entity in entities if entity.position]
-        try:
-            if not any([entity for entity in entities if entity.position.x == x and entity.position.y == y]) and \
-                    game_map.is_within_map(x, y) and not game_map.is_blocked(x, y):
+        if not any([entity for entity in entities if entity.position.x == x and entity.position.y == y]) and \
+                game_map.is_within_map(x, y) and not game_map.is_blocked(x, y):
 
-                mob_index = random_choice_from_dict(monster_chances)
-                mob_stats = MOBS.get(mob_index)
-                faction = "Mindless"
-                ai = AI
-                mob_entity = generate_mob(x, y, mob_stats, mob_index, encounter, faction, ai, entities)
+            mob_index = random_choice_from_dict(monster_chances)
+            mob_stats = MOBS.get(mob_index)
+            faction = "Mindless"
+            ai = AI
+            mob_entity = generate_mob(x, y, mob_stats, mob_index, encounter, faction, ai, entities)
 
-                entities.append(mob_entity)
-                monster_list.append(mob_entity)
-        except:
-            print(entities)
+            entities.append(mob_entity)
+            monster_list.append(mob_entity)
+        # except :
+        #     print(entities)
 
     return monster_list
 
@@ -624,6 +638,7 @@ def place_entities(game_map, dungeon_level, room, entities, item_table, mob_tabl
     encounter.mob_list = generate_mobs(entities, game_map, number_of_mobs, mob_table, monster_chances, encounter, room=room)
     # Generate Items
     item_list = generate_items(entities, game_map, room, number_of_items, item_chances, item_table)
+
     encounter.item_list = item_list
 
     # Group Created Monsters and Items into a Single Encounter

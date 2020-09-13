@@ -1,3 +1,25 @@
+09-13-2020
+- Modified Castle Walls and Castle Floor Tiles - Done
+- Removed enemy FOV render for less visual noise - Done
+- Allowed Default tiles for each level for coherent level generation - Done
+- Adjust map render to close to top left - Done
+- Connected start, end and main room for Yendor Castle - Done
+
+
+09-08-2020
+ - 3rd Level Town Gen
+    - Create town center - Done
+    - Add doors to each building - Done
+    - Roads to most of each building - Done
+    - Rivers do not make impassable Terrain
+    - Big road leading to castle entrance from town center - Done
+    - Populated Ruined Buildings
+        - Add treasure boxes - Done
+        - Emulate 2nd Floor - Not feastible
+    - Inhabited Buildings
+        - Add treasure boxes - Done
+        - Emulate Separate Inhabited Buildings - Not feastible
+
 09-07-2020
  - Displayed Story-Driven Event Messages at the beginning of every level - Done
  - Enable multi-attack - Done
@@ -10,13 +32,4 @@
  - Healing potions heal max hp - Done
  - Enable bridges across unpassable rivers - Done
 
- 09-08-2020
- - 3rd Level Town Gen
-    - Create town center
-    - Roads to most of each building
-    - Rivers do not make impassable Terrain
-    - Big road leading to castle entrance from town center
-    - Populated Ruined Buildings
-        - Emulate 2nd Floor
-    - Inhabited Buildings
-        - Emulate Separate Inhabited Buildings
+

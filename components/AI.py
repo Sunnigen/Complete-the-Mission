@@ -109,11 +109,10 @@ class AI:
         # Check to Cast Spell or Perform Skill
         if self.current_target:
             if self.owner.spellcaster:
-
                 if self.owner.spellcaster.has_spells:
 
                     # Check HP to Heal
-                    if self.owner.fighter.hp <= self.owner.fighter.max_hp // 2:
+                    if self.owner.fighter.hp <= self.owner.fighter.max_hp // 2 and self.owner.spellcaster.has_specific_spell(cast_mend):
                         results.extend(self.owner.spellcaster.cast(cast_mend))
                         return results
 

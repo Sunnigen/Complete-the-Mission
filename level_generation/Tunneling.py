@@ -14,11 +14,15 @@ class TunnelingAlgorithm:
     dungeon_level = 0
     room_min_size = 6
     room_max_size = 30
+    width = 10
+    height = 10
 
     def generate_level(self, game_map, dungeon_level, max_rooms, room_min_size, room_max_size, map_width, map_height,
                        player, entities, particles, particle_systems, item_table, mob_table):
 
         self.game_map = game_map
+        self.width = map_width
+        self.height = map_height
         self.dungeon_level = dungeon_level
         self.room_max_size = min(map_height // 5, map_width // 5)
         self.room_min_size = min(map_height // 7, map_width // 7)

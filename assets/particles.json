@@ -2,7 +2,14 @@
   "hit": {
     "name": "Hit Particle",
     "lifetime": 3,
-    "fg": [255, 0, 63],
+    "fg": [255, 0, 0],
+    "char": 34,
+    "glyph": "\""
+  },
+  "hit_blank": {
+    "name": "Hit Blank Particle",
+    "lifetime": 3,
+    "fg": [255, 115, 149],
     "char": 34,
     "glyph": "\""
   },

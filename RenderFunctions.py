@@ -66,13 +66,13 @@ def render_viewport(console, mouse_pos, mouse_targets, game_map, entities, fov_m
                 visible = False
                 enemy_fov = False
                 walkable = False
-                explored = False
+                explored = True
 
                 # sys.exit()
 
 
             # wall = not game_map.walkable[y][x]  # Check if tile is a wall at (x, y)
-
+            enemy_fov = False
             # Add Highlight to Entity and Entity's FOV
             lerp_val = 0.5 * toggle_reveal_all * enemy_fov * walkable
             # print('lerp_val:', lerp_val)
@@ -81,6 +81,7 @@ def render_viewport(console, mouse_pos, mouse_targets, game_map, entities, fov_m
             tile_fg_color = game_map.tile_set[str(tile)].get('fg_color', tcod.white)
 
             # Select Tile
+            # visible = True
             if visible:
                 tile_color = game_map.tile_set[str(tile)].get('color')
                 tile_char = game_map.tile_set[str(tile)].get('glyph')

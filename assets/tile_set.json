@@ -219,7 +219,7 @@
     "glyph": "-",
     "fg_color": [10, 10, 10],
     "color": [60, 50, 31],
-    "fov_char": 0,
+    "fov_char": 45,
     "breakable": false,
     "movable": false,
     "walkable": true,
@@ -861,6 +861,36 @@
     "fov": true,
     "tile_cost": 0,
     "properties": []
+  },
+  "51": {
+    "name": "Castle Floor",
+    "name2": "castle_floor",
+    "type": "terrain",
+    "char": 46,
+    "glyph": ".",
+    "color": [127, 127, 127],
+    "fov_char": 46,
+    "breakable": false,
+    "movable": false,
+    "walkable": true,
+    "transparent": true,
+    "fov": true,
+    "tile_cost": 2
+  },
+  "52": {
+    "name": "Castle Wall",
+    "name2": "castle_wall",
+    "type": "terrain",
+    "char": 0,
+    "glyph": " ",
+    "color": [128, 104, 64],
+    "fov_char": 0,
+    "breakable": false,
+    "movable": false,
+    "walkable": true,
+    "transparent": false,
+    "fov": false,
+    "tile_cost": 2
   }
 
 }

@@ -8,6 +8,7 @@ from tcod.map import Map
 from level_generation.GenericDungeon import generic_dungeon
 from level_generation.UndergravePrison import UndergravePrison
 from level_generation.ResinfaireForest import ResinFaireForest
+from level_generation.YendorCastle import YendorCastle
 from level_generation.GenerationUtils import place_tile
 from level_generation.Overworld import Overworld
 from level_generation.RandomWalk import RandomWalkAlgorithm
@@ -87,9 +88,9 @@ class GameMap(Map):
 
     def initialize_closed_map(self):
         # Set Entire Map to Closed Walls
-        self.explored = [[False for y in range(self.width)] for x in range(self.height)]
+        self.explored = [[True for y in range(self.width)] for x in range(self.height)]
         self.tile_cost = [[0 for x in range(self.width)] for y in range(self.height)]
-        self.tileset_tiles = [[1 for y in range(self.width)] for x in range(self.height)]
+        self.tileset_tiles = [[self.default_tile for y in range(self.width)] for x in range(self.height)]
         self.map_objects = []
         self.mouse_rooms = []
 
@@ -145,9 +146,9 @@ class GameMap(Map):
         #     self.initialize_closed_map()
         #     self.map = choice(LEVEL_GENERATION)()
         #     self.level = 'Dungeon'
-        self.dungeon_level = 3
+        # self.dungeon_level += 1
         if self.dungeon_level == 1:
-            self.level_message = "You begin your journey to the Castle of Yendor.\n\nThe tales of its plagued forest, massacred-crazed townsfolk and corrupt King perplex you as to venture to find out what happened."
+            self.level_message = "You begin your journey to the Castle of Yendor.\n\nThe tales of its plagued forest, massacred-crazed townsfolk and corrupt King perplex you.\n\nIt's time to find out what happened."
             self.default_tile = 13
             self.initialize_closed_map()
             self.map = ResinFaireForest()
@@ -157,7 +158,7 @@ class GameMap(Map):
             map_height = 45
             item_table = obtain_item_table()
         elif self.dungeon_level == 2:
-            self.level_message = "As you continue through Resinfaire Forest, you begin notice the normal denizens look slightly warped.\n\n\"What must've happened?\"\n-you wonder.\n\nYou step forward cautiously."
+            self.level_message = "As you continue through Resinfaire Forest, you begin notice the normal denizens look slightly warped.\n\n\"What must've happened?\"\n-you wonder.\n\nYou step forward cautiously\n\nIt's time to get revenge.."
             self.default_tile = 13
             self.initialize_closed_map()
             self.map = ResinFaireForest()
@@ -167,12 +168,22 @@ class GameMap(Map):
             map_width = 40
             map_height = 55
         elif self.dungeon_level == 3:
-            self.level_message = "You see a village in the distance"
+            self.level_message = "You see a village in the distance.\n\nIt's time to get revenge."
             self.default_tile = 13
             self.initialize_closed_map()
             self.map = ResinFaireForest()
             self.level = 'resinfaire'
             mob_table = obtain_mob_table("resinfaire_mobs")
+            item_table = obtain_item_table()
+            map_width = 55
+            map_height = 55
+        elif self.dungeon_level == 4:
+            self.level_message = "You enter Resinfaire Castle\n\nYou feel darkness envelops you as you hear faint voices and make out figures in the distance. They haven't noticed your arrival yet.\n\nIt's time to get revenge."
+            self.default_tile = 52
+            self.initialize_closed_map()
+            self.map = YendorCastle()
+            self.level = 'yendor castle'
+            mob_table = obtain_mob_table("yendor_1_mobs")
             item_table = obtain_item_table()
             map_width = 55
             map_height = 55

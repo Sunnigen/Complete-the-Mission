@@ -255,8 +255,9 @@ class Game(Controller):
             # Check if Map is Walkable
             if not self.game_map.is_blocked(destination_x, destination_y):
                 # get_blocking_entities_at_location(entities, target_x, target_y, origin_x, origin_y
-                targets = get_blocking_entities_at_location(self.entities, destination_x, destination_y,
-                                                           self.player.position.x, self.player.position.y)
+                # print(self.entities, destination_x,destination_y, self.player.position.x, self.player.position.y)
+                targets, targetted_spaces = get_blocking_entities_at_location(
+                    self.entities, destination_x, destination_y, self.player.position.x, self.player.position.y, [])
 
 
                 # print("targets: ", targets)
@@ -296,6 +297,10 @@ class Game(Controller):
                         # Neutral
                         # self.player_turn_results.extend([{'message': Message('You bump into a %s.' % target.name)}])
                         # self.game_state = GameStates.ENEMY_TURN
+                    # Spawn Hit Particles for Non-Target Spaces
+                    for (x, y) in targetted_spaces:
+                        if not self.game_map.is_blocked(x, y) and (x, y) in self.player.fighter.curr_fov_map:
+                            self.player_turn_results.append({"spawn_particle": ["hit_blank", x, y, None]})
 
                 else:
                     self.game_map.tile_cost[self.player.position.y][self.player.position.x] = TILE_SET.get("%s" % self.game_map.tileset_tiles[self.player.position.y][self.player.position.x]).get('tile_cost')

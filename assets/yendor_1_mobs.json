@@ -1,0 +1,46 @@
+{
+  "warped_knight": {
+    "name": "Warped Knight",
+    "char": 107,
+    "glyph": "k",
+    "color": [48, 64, 0],
+    "hp": 6,
+    "def": 1,
+    "att": 1,
+    "xp": 75,
+    "spawn_chance": [[15, 4]],
+    "mob_level": 4,
+    "fov_range": 8,
+    "description": "As you stare into it's face inside the helmet, you make out skeletal features with left over flesh still clinging on."
+  },
+  "plagued paladin": {
+    "name": "Plagued Paladin",
+    "char": 112,
+    "glyph": "p",
+    "color": [48, 64, 0],
+    "hp": 8,
+    "def": 1,
+    "att": 1,
+    "xp": 75,
+    "spawn_chance": [[5, 4]],
+    "mob_level": 4,
+    "fov_range": 8,
+    "spells": ["holy_strike"],
+    "description": "What used to be a pillar of virtue and holy has now become an armored beacon of evil."
+  },
+  "plagued guardsman": {
+    "name": "Plagued Guardsman",
+    "char": 103,
+    "glyph": "g",
+    "color": [48, 64, 0],
+    "hp": 3,
+    "def": 1,
+    "att": 1,
+    "xp": 75,
+    "spawn_chance": [[80, 4]],
+    "mob_level": 4,
+    "fov_range": 8,
+    "spells": ["plague_touch"],
+    "description": "The dangling flesh from various limbs is discolored green, best to strike from a distance if possible."
+    }
+}

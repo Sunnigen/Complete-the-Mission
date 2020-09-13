@@ -187,7 +187,7 @@ class BinarySpacePartition(BSP):
                 print('somehow there is no pair?')
                 self.force_create_hall(cell_block, previous_cell_block, width)
 
-    def create_walled_room(self, room, buffer=0):
+    def create_walled_room(self, room, buffer=0, ):
         # Sets Tiles in to Become Passable, but add walls around
         for x in range(room.x, room.x + room.width):
             for y in range(room.y, room.y + room.height):

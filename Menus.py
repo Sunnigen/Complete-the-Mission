@@ -9,7 +9,10 @@ TILE_SET = obtain_tile_set()
 
 def picture(console, game_map, dungeon_map, header, map_width, map_height, screen_width, screen_height, panel_height):
     # create an off-screen console that represents the menu's window
-    window = tcod.console_new(screen_width, screen_height)
+
+    map_width = game_map.map.width
+    map_height = game_map.map.height
+    window = tcod.console_new(map_width, map_height)
 
     dungeon_map.blit_2x(window, 0, 0, 0, 0, -1, -1)
 
@@ -18,16 +21,18 @@ def picture(console, game_map, dungeon_map, header, map_width, map_height, scree
     # (-map_height // 2) - (screen_height // 2)
     true_width, true_height = 0, 0
 
-    if map_width >= screen_width:
-        true_width = 0
-    else:
-        true_width = -map_width // 4
-
-    if map_height >= screen_height:
-        true_height = 0
-    else:
-        true_height = -map_height // 4
-    window.blit(dest=console, dest_x=0, dest_y=0, src_x=0, src_y=0,width=map_width, height=map_height)
+    # if map_width >= screen_width:
+    #     true_width = 0
+    # else:
+    #     true_width = -map_width // 4
+    #
+    # if map_height >= screen_height:
+    #     true_height = 0
+    # else:
+    #     true_height = -map_height // 4
+    # print("screen_width, screen_height:", screen_width, screen_height)
+    # print("map_width, map_height:", map_width, map_height)
+    window.blit(dest=console, dest_x=2, dest_y=2, src_x=0, src_y=0,width=map_width//2, height=map_height//2)
     # tcod.console_blit(window, true_width, true_height, map_width, map_height, 1, 0, 0, 1.0, 1.0)
     # tcod.console_blit(window, -map_width // 4, -map_height // 4, map_width, map_height, 1, 0, 0, 1.0, 1.0)
 
@@ -127,10 +132,10 @@ def level_up_menu(con, header, player, menu_width, screen_width, screen_height):
 
 def map_screen(console, entities, game_map, header, map_width, map_height, screen_width, screen_height, panel_height):
     # TODO: Save processing time by keeping base map as image file and modify add entities before blitting?
-    dungeon_map = TcodImage(width=game_map.width, height=game_map.height)
+    dungeon_map = TcodImage(width=game_map.map.width, height=game_map.map.height)
 
-    for x in range(game_map.width):
-        for y in range(game_map.height):
+    for x in range(game_map.map.width):
+        for y in range(game_map.map.height):
             tile = TILE_SET.get("%s" % (game_map.tileset_tiles[y][x]))
             color = tile.get("fg_color", tile["color"])
             dungeon_map.put_pixel(x, y, color)

@@ -28,5 +28,14 @@
     "spell_function": "cast_thorn_spike",
     "targeting": true,
     "targeting_message": "Select a target to launch spikes at."
+  },
+  "plague_touch": {
+    "name": "Plague Touch"
+  },
+  "holy_strike": {
+    "name": "Holy Strike"
+  },
+  "plague_bite": {
+    "name": "Plague Bite"
   }
 }

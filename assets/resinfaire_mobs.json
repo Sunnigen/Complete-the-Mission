@@ -15,7 +15,8 @@
   },
   "plague_wolf": {
     "name": "Plague Wolf",
-    "char": "w",
+    "char": 119,
+    "glyph": "w",
     "color": [143, 0, 191],
     "hp": 2,
     "def": 0,
@@ -130,11 +131,13 @@
     "name": "Crazed Villager",
     "char": 118,
     "glyph": "v",
-    "color": [159, 159, 159],
+    "color": [210, 159, 159],
     "hp": 5,
     "def": 0,
     "att": 1,
     "xp": 50,
-    "spawn_chance": [[75, 3]]
+    "spawn_chance": [[75, 3]],
+    "mob_level": 2,
+    "fov_range": 9
   }
 }

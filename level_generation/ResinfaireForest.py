@@ -21,6 +21,7 @@ PREFABS = obtain_prefabs()
 class ResinFaireForest(CellularAutomata):
     dungeon_level = 0
     game_map = None
+    town_center = None
 
     def generate_level(self, game_map, dungeon_level, max_rooms, room_min_size, room_max_size, map_width, map_height,
                        player, entities, particles, particle_systems, item_table, mob_table):
@@ -28,6 +29,7 @@ class ResinFaireForest(CellularAutomata):
         self.dungeon_level = dungeon_level
         self.width = map_width
         self.height = map_height
+
         mold = False
         castle_entrance = False
         if dungeon_level == 1:
@@ -70,7 +72,7 @@ class ResinFaireForest(CellularAutomata):
             self.encounter_spread_factor = 5
             self.sparse_wall_density = 50
             # Specific Dungeon Level Variables
-            mold = False
+            mold = True
             town = True
             castle_entrance = True
         else:
@@ -98,6 +100,15 @@ class ResinFaireForest(CellularAutomata):
             self.generate_town(room_min_size, room_max_size, entities, particles)
             self.generate_roads()
             self.generate_castle_entrance()
+
+            # place_tile(self.game_map, x,  y+h, "46")
+
+            x1 = self.end_area.x
+            y1 = self.end_area.y + self.end_area.height
+
+            x2, y2 = self.town_center.x, self.town_center.y-3
+
+            self.generate_road(x1,y1,x2,y2,True)
         else:
             self.generate_roads()
         # self.generate_rivers()
@@ -106,8 +117,8 @@ class ResinFaireForest(CellularAutomata):
 
 
         # Area of Interest Locations
-        for area in self.areas_of_interest:
-            place_tile(self.game_map, area.x, area.y, '3')
+        # for area in self.areas_of_interest:
+        #     place_tile(self.game_map, area.x, area.y, '3')
 
         # Select Player Starting Area
         # player.position.x, player.position.y = self.end_area.x, self.end_area.y
@@ -128,9 +139,9 @@ class ResinFaireForest(CellularAutomata):
         #     self.generate_outpost(area, entities, particles)
 
         # self.ref_spawn_groups(entities)
-        # areas = deepcopy(self.areas_of_interest)
-        # for area in areas:
-        #     place_entities(self.game_map, self.dungeon_level, area, entities, item_table, mob_table)
+        areas = deepcopy(self.areas_of_interest)
+        for area in areas:
+            place_entities(self.game_map, self.dungeon_level, area, entities, item_table, mob_table)
 
         # Game Map
         self.game_map = game_map
@@ -173,8 +184,14 @@ class ResinFaireForest(CellularAutomata):
 
         for i in range(1 + x - w//2, x+w//2):
             place_tile(self.game_map, i, y+h-1, "35")
+        create_floor(self.game_map, x, y+h-1)
 
-        # for i in range
+        for i in range(1 + x - w//2, x+w//2):
+            create_floor(self.game_map, i, y+h)
+
+
+        # place_tile(self.game_map, x,  y+h, "46")
+
 
     def generate_town(self, room_min_size, room_max_size, entities, particles):
         bsp_x = 10
@@ -217,7 +234,7 @@ class ResinFaireForest(CellularAutomata):
                 buildings.append((x, y, w, h))
 
         # Find Closest to Center
-        print('center:', (bsp_width//2) + bsp_x, (bsp_height//2) + bsp_y)
+        # print('center:', (bsp_width//2) + bsp_x, (bsp_height//2) + bsp_y)
         # (2) Sorts, for x then for y
         buildings = sorted(buildings, key=lambda attribute: (distance(attribute[0] + (attribute[2]//2),
                                                                       attribute[1] + (attribute[3]//2),
@@ -225,42 +242,82 @@ class ResinFaireForest(CellularAutomata):
                                                                       (bsp_height//2) + bsp_y)))
 
         t = buildings[0]
-        print('buildings:', buildings)
-        print("Towncenter:", t)
+        # print('buildings:', buildings)
+        # print("Towncenter:", t)
 
         town_center_area = AreaofInterest(*t)
+        self.town_center = town_center_area
         self.areas_of_interest.append(town_center_area)
         town_center_prefab = PREFABS.get("town_center")
         p = Prefab()
         p.load_template(town_center_prefab)
         p.x, p.y = t[0], t[1]
-        place_prefab(self.game_map, p, entities, particles, self.dungeon_level)
-
         buildings.remove(t)
 
-
         for x, y, w, h in buildings:
-
             ruined = choice([False, True])
             self.clear_floor(x, y, w, h)
             self.create_walled_room(x, y, w, h, ruined)
 
             # Place Map Objects
             self.populate_building(x+1, y+1, w-2, h-2, entities, particles)
+            door_x, door_y = self.generate_door(x, y, w, h, entities, particles)
+            self.generate_road(door_x, door_y, town_center_area.x + 2, town_center_area.y + 2)
 
             if ruined:
                 self.areas_of_interest.append(AreaofInterest(x, y, w, h))
                     # print('Dig a room for %s.' % node)
 
-        place_tile(self.game_map, bsp_width//2 + bsp_x,  bsp_height//2 + bsp_y, "46")
+        # place_tile(self.game_map, bsp_width//2 + bsp_x,  bsp_height//2 + bsp_y, "46")
+
+        # Place Town Center
+        place_prefab(self.game_map, p, entities, particles, self.dungeon_level)
+
+        # Road from Town Center to Castle Gates
+
 
     def center(self):
         center_x = int((self.x + self.x + self.width) / 2)
         center_y = int((self.y + self.y + self.height) / 2)
         return center_x, center_y
 
+    def generate_door(self, x, y, w, h, entities, particles):
+        # Door
+        poss_locations = []
+
+        # Top
+        poss_locations.extend((i, y) for i in range(x + 1, x + w - 1))
+        # # Bottom
+        poss_locations.extend((i, y + h - 1) for i in range(x + 1, x + w - 1))
+        # # Left
+        poss_locations.extend((x, j) for j in range(y + 1, y + h - 1))
+        # # Right
+        poss_locations.extend((x + w - 1, j) for j in range(y + 1, y + h - 1))
+
+        # print('poss_locations:', poss_locations)
+        # Two Doors
+        shuffle(poss_locations)
+        if randint(0, 4) == 1:
+            door_x, door_y = poss_locations.pop()
+            # print('door:', door_x, door_y)
+            create_floor(self.game_map, door_x, door_y)
+            door_index = "5"
+            door_stats = TILESET.get(door_index)
+            generate_object(door_x, door_y, entities, self.game_map.map_objects, particles, self.game_map, door_stats,
+                            door_index, item_list=None)
+
+        door_x, door_y = poss_locations.pop()
+        # print('door:', door_x, door_y)
+        create_floor(self.game_map, door_x, door_y)
+        door_index = "5"
+        door_stats = TILESET.get(door_index)
+        generate_object(door_x, door_y, entities, self.game_map.map_objects, particles, self.game_map, door_stats,
+                        door_index, item_list=None)
+
+        return door_x, door_y
+
     def populate_building(self, x, y, w, h, entities, particles):
-        # Place Prefabs for Jail Cell
+        # Place Prefabs for Building
         chest = choices(population=[PREFABS.get("open_chest"), PREFABS.get("closed_chest")], weights=[50, 50], k=1)[0]
         prefab_list = [chest]
         for prefab in prefab_list:
@@ -277,6 +334,10 @@ class ResinFaireForest(CellularAutomata):
                     place_prefab(self.game_map, p, entities, particles, self.dungeon_level)
                     tries = max_tries
                 tries += 1
+
+
+
+
 
     def clear_floor(self, x, y, w, h):
         for room_x in range(x - 1, x + w + 1):
@@ -342,6 +403,21 @@ class ResinFaireForest(CellularAutomata):
                         place_tile(self.game_map, c_y, c_x, '37')
                     except:
                         pass
+
+    def generate_road(self, x1,y1,x2,y2, wide=False):
+        # Connect Roads between (2) Areas
+        astar = tcod.path.AStar(self.game_map.tile_cost, 5)
+
+        path = astar.get_path(y1, x1, y2, x2)
+        for x, y in path:
+            if self.game_map.tileset_tiles[y][x] == 2:
+
+                if wide:
+                    place_tile(self.game_map, y, x, '12')
+                    place_tile(self.game_map, y+1, x, '12')
+                    place_tile(self.game_map, y-1, x, '12')
+
+
 
     def generate_roads(self):
         # print('generate_roads')
