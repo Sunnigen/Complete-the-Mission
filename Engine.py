@@ -254,10 +254,12 @@ class Game(Controller):
 
             # Check if Map is Walkable
             if not self.game_map.is_blocked(destination_x, destination_y):
-                # get_blocking_entities_at_location(entities, target_x, target_y, origin_x, origin_y
                 # print(self.entities, destination_x,destination_y, self.player.position.x, self.player.position.y)
+
+                tech = choice(["side_impact", "spin_impact", "far_impact", "blast_impact","dragons_breath_impact", None])
                 targets, targetted_spaces = get_blocking_entities_at_location(
-                    self.entities, destination_x, destination_y, self.player.position.x, self.player.position.y, [])
+                    self.entities, destination_x, destination_y, self.player.position.x, self.player.position.y,
+                    technique_name=tech)
 
 
                 # print("targets: ", targets)
