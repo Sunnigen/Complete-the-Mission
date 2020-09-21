@@ -12,6 +12,7 @@ from level_generation.BSP import BinarySpacePartition
 from level_generation.GenerationUtils import generate_mobs, generate_object, place_tile, create_floor, create_wall, generate_mob, place_prefab, place_stairs, place_entities
 from level_generation.Prefab import Prefab
 from loader_functions.JsonReader import obtain_tile_set, obtain_prefabs, obtain_mob_table
+from map_objects.GameEvent import GameEvent, tile_index_at_position_condition
 from RandomUtils import spawn_chance
 
 TILESET = obtain_tile_set()
@@ -19,13 +20,12 @@ MOBS = obtain_mob_table("yendor_1_mobs")
 PREFABS = obtain_prefabs()
 
 
-class YendorCastle(BinarySpacePartition):
+class YendorCastleOuter(BinarySpacePartition):
     game_map = None
     dungeon_level = 0
     sub_room_depth = 8  # How much to further split up each room of each cell block
     start_room = None
     end_room = None
-
 
     def generate_level(self, game_map, dungeon_level, max_rooms, room_min_size, room_max_size, map_width, map_height,
                        player, entities, particles, particle_systems, item_table, mob_table):
@@ -88,10 +88,17 @@ class YendorCastle(BinarySpacePartition):
             for x in range((map_width // 2), (map_width // 2)+11):  # start room to main
                 place_tile(self.game_map, x, map_height - 6, "51")
 
-            for x in range((map_width // 2), (map_width // 2)+11):  # end toom to main
+            for x in range((map_width // 2), (map_width // 2)+11):  # end Room to main
                 # =map_height-6-7
                 place_tile(self.game_map, x, self.end_room.y+self.end_room.height, "51")
                 place_tile(self.game_map, x, self.end_room.y + self.end_room.height+1, "51")
+
+            # Place Map Objects
+
+            # Levers
+            self.create_lever_event(entities, particles)
+
+
 
             # Place Entities in each of the Sub rooms generated in Main Room
             for room in self.sub_rooms:
@@ -148,6 +155,89 @@ class YendorCastle(BinarySpacePartition):
                     place_tile(self.game_map, x + i, y + j, "16")
                 else:
                     break
+
+    def create_lever_event(self, entities, particles):
+        lever_index = "54"
+        lever_stats = TILESET.get(lever_index)
+        lever_entities = []
+        r = None
+        d = 0
+        ref_coords = [(self.end_room.x, self.end_room.y), (self.start_room.x, self.start_room.y)]
+
+        for room in self.sub_rooms:
+            _d = 0
+            for other_room_x, other_room_y in ref_coords:
+                _d += distance(room.x, room.y, other_room_x, other_room_y)
+
+            if _d > d:
+                r = room
+                d = _d
+
+        x, y = self.obtain_point_within(r)
+
+        if x and y:
+            lever_entities.append(generate_object(x, y, entities, self.game_map.map_objects, particles, self.game_map, lever_stats,
+                            lever_index, item_list=None, no_inventory=True))
+
+            ref_coords.append((x, y))
+        # Find 2nd Farthest Room
+        print('Find 2nd Farthest Room')
+        r = None
+        d = 0
+        for room in self.sub_rooms:
+            _d = 0
+            for other_room_x, other_room_y in ref_coords:
+                _d += distance(room.x, room.y, other_room_x, other_room_y)
+
+            if _d > d:
+                r = room
+                d = _d
+        # print(r, _d)
+
+        x, y = self.obtain_point_within(r)
+        if x and y:
+            lever_entities.append(generate_object(x, y, entities, self.game_map.map_objects, particles, self.game_map, lever_stats,
+                            lever_index, item_list=None, no_inventory=True))
+
+
+
+        # Game Event for Levers
+        map_object_index = "35"
+        map_object_stats = TILESET.get(map_object_index)
+        iron_gate_entities = []
+        for x in range(self.width // 2, self.height // 2 + 11):  # end Room to main
+            # =map_height-6-7
+            # place_tile(self.game_map, x, self.end_room.y + self.end_room.height, "51")
+            # place_tile(self.game_map, x, self.end_room.y + self.end_room.height + 1, "51")
+            iron_gate_entity = generate_object(x, self.end_room.y + self.end_room.height + 1, entities,
+                                               self.game_map.map_objects, particles, self.game_map, map_object_stats,
+                                               map_object_index)
+            iron_gate_entities.append(iron_gate_entity)
+        conditions = [tile_index_at_position_condition]
+        condition_kwargs = {"tile_index": 53, "lever_entities": lever_entities}
+        game_event = GameEvent(self.game_map, 'open_gate', conditions=conditions, condition_kwargs=condition_kwargs,
+                               map_objects=iron_gate_entities, default_floor_tile="51")
+        self.game_map.game_events.append(game_event)
+
+    def obtain_point_within(self, room, padding=1):
+        max_num_of_tries = 2 * room.width * room.height
+        try_count = 0
+        while try_count < max_num_of_tries:
+            x = randint(room.x + padding, room.x + room.width - padding - 1)
+            y = randint(room.y + padding, room.y + room.height - padding - 1)
+            print(x, y)
+            # Check if Spot is Open
+            if self.game_map.walkable[y][x]:
+                break
+            else:
+                x, y = None, None
+            try_count += 1
+        print(x, y)
+        return x, y
+
+
+def distance(x1, y1, x2, y2):
+    return sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
 
 
 def center(self):

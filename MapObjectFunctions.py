@@ -15,6 +15,20 @@ def no_function(*args, **kwargs):
     return []
 
 
+def toggle_switch(*args, **kwargs):
+    owner_entity = args[0]
+    lever_entity = args[1]
+
+
+    results = [{"change_map_object": [lever_entity, 53],
+                'message': Message('You pull the lever...'.format(owner_entity.name, lever_entity.name), tcod.yellow)}]
+    return results
+
+
+def already_toggle_switch(*args, **kwargs):
+    return [{'message': Message("The lever has already been pulled.", tcod.dark_yellow)}]
+
+
 def event_gate(*args, **kwargs):
     return [{'message': Message("You can't spot a keyhole. There has to be another way to open the gate?", tcod.dark_yellow)}]
 

@@ -326,7 +326,7 @@ class UndergravePrison(BinarySpacePartition):
             map_object_stats = TILE_SET.get(map_object_index)
             iron_gate_entity = generate_object(25, 34, entities, self.game_map.map_objects, particles, self.game_map,
                                                map_object_stats, map_object_index)
-            conditions = [entity_at_position_condition, check_entity_dead]
+            conditions = [entity_at_position_condition]
             condition_kwargs = {"area_of_interest": (24, 26, 33, 35), "entity": self.game_map.player,
                                 'target_entity': warden_mob}
             game_event = GameEvent(self.game_map, 'open_gate', conditions=conditions, condition_kwargs=condition_kwargs,

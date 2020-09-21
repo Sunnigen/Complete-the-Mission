@@ -256,7 +256,8 @@ class Game(Controller):
             if not self.game_map.is_blocked(destination_x, destination_y):
                 # print(self.entities, destination_x,destination_y, self.player.position.x, self.player.position.y)
 
-                tech = choice(["side_impact", "spin_impact", "far_impact", "blast_impact","dragons_breath_impact", None])
+                tech = "side_impact"
+                # tech = choice(["side_impact", "spin_impact", "far_impact", "blast_impact","dragons_breath_impact", None])
                 targets, targetted_spaces = get_blocking_entities_at_location(
                     self.entities, destination_x, destination_y, self.player.position.x, self.player.position.y,
                     technique_name=tech)
@@ -912,6 +913,7 @@ class Game(Controller):
             self.mouse_pos = new_x, new_y
 
     def initialize_game(self, level):
+        print('initialize_game : ', level)
         # Initialize Game Variables
         self.player, self.entities, self.particles, self.particle_systems, self.game_map, self.message_log, \
             self.game_state = get_game_variables(CONSTANTS, level=level)
@@ -1283,15 +1285,15 @@ class Game(Controller):
                 line_count += 6 + ceil(len(entity.name) / (info_pane_width - 2))
 
             elif entity.equippable:
-                info += '\n\n%s\n\n%s\n\n+HP: %s\n+STR: %s\nDEF: %s' % (entity.name, entity.equippable.description,
+                info += '\n\n%s\n\n+HP: %s\n+STR: %s\nDEF: %s' % (entity.name,
                                                 entity.equippable.max_hp_bonus,
                                                 entity.equippable.power_bonus,
                                                 entity.equippable.defense_bonus)
-                line_count += 5 + ceil(len(entity.equippable.description) / info_pane_width + len(entity.name) / info_pane_width)
+                line_count += 5 + ceil(len(entity.name) / info_pane_width)
 
             elif entity.item:
-                info += '\n\n%s\n\n%s' % (entity.name, entity.item.description)
-                line_count += 4 + ceil(len(entity.item.description) / info_pane_width)
+                info += '\n\n{}'.format(entity.name)
+                line_count += 2
 
         if entities_under_mouse:
             # Check left or right

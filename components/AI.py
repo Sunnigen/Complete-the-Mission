@@ -6,7 +6,7 @@ from GameMessages import Message
 from loader_functions.JsonReader import obtain_mob_table
 from map_objects.GameMapUtils import get_map_object_at_location
 
-from SpellFunctions import cast_mend, cast_thorn_spike
+from SpellFunctions import cast_mend, cast_thorn_spike, no_spell
 
 MOBS = obtain_mob_table()
 
@@ -107,21 +107,45 @@ class AI:
         mob = self.owner
 
         # Check to Cast Spell or Perform Skill
-        if self.current_target:
-            if self.owner.spellcaster:
-                if self.owner.spellcaster.has_spells:
+        can_cast_spells = getattr(self.owner.spellcaster, 'has_spells', None)
+        if self.current_target and can_cast_spells:
+            if self.owner.spellcaster.has_spells:
 
-                    # Check HP to Heal
-                    if self.owner.fighter.hp <= self.owner.fighter.max_hp // 2 and self.owner.spellcaster.has_specific_spell(cast_mend):
-                        results.extend(self.owner.spellcaster.cast(cast_mend))
-                        return results
+                # Select Spell
+                # Check Self HP to Heal
+                if self.owner.fighter.hp <= self.owner.fighter.max_hp // 2 and self.owner.spellcaster.has_spell_type("restorative"):
+                    try:
+                        spell_to_cast = choice([spell for spell in self.owner.spellcaster.spells if spell.type & {"restorative"} and spell.is_ready])
+                        target = self.owner
+                    except IndexError:
+                        # Empty sequence/no spells
+                        spell_to_cast = None
+                        target = None
 
-                    # Check Enemy to cast Spell
-                    if self.owner.faction.check_enemy(self.current_target.faction.faction_name) and \
-                        mob.position.distance_to(self.current_target.position.x, self.current_target.position.y) < 5:
-                        # Select Self Buff or Offensive Spell
-                        results.extend(self.owner.spellcaster.cast(cast_thorn_spike, target=self.current_target))
-                        return results
+                elif self.owner.faction.check_enemy(self.current_target.faction.faction_name):
+                    try:
+                        spell_to_cast = choice([spell for spell in self.owner.spellcaster.spells if spell.type & {"offensive", "buff", "environment"} and spell.is_ready])
+                        target = self.current_target
+                    except IndexError:
+                        # Empty sequence/no spells
+                        spell_to_cast = None
+                        target = None
+
+                else:
+                    spell_to_cast = None
+                    target = None
+
+                if spell_to_cast:
+                    results.extend(self.owner.spellcaster.cast(spell_to_cast, target=target))
+                    return results
+
+
+                # Check Enemy to cast Spell
+                # if self.owner.faction.check_enemy(self.current_target.faction.faction_name) and \
+                #     mob.position.distance_to(self.current_target.position.x, self.current_target.position.y) < 5:
+                #     # Select Self Buff or Offensive Spell
+                #     results.extend(self.owner.spellcaster.cast(cast_thorn_spike, spell, target=self.current_target))
+                #     return results
 
         # Check if Stuck to Reset Path
         if self.stuck_time > self.stuck_time_max:

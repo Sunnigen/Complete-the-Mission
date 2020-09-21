@@ -1,2 +1,8 @@
-
+# Ignore File Types
 *.pyc
+
+# Ignore Folder Locations
+.idea/
+components/__pycache__/
+level_generation/__pycache__/
+save_files/

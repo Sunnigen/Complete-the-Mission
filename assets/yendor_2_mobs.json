@@ -43,19 +43,18 @@
     "spells": ["plague_touch"],
     "description": "The dangling flesh from various limbs is discolored green, best to strike from a distance if possible."
     },
-  "plagued sorceror": {
-    "name": "Plagued Sorceror",
-    "char": 115,
-    "glyph": "s",
-    "color": [48, 64, 0],
-    "hp": 10,
+  "corrupt_king" : {
+    "name": "Corrupt King",
+    "char": 75,
+    "glyph": "K",
+    "color": [128, 128, 0],
+    "hp": 12,
     "def": 0,
-    "att": 0,
-    "xp": 150,
-    "spawn_chance": [[50, 4]],
+    "att": 1,
+    "xp": 500,
+    "spawn_chance": [[0, 4]],
     "mob_level": 4,
     "fov_range": 8,
-    "spells": ["summon_plagued_goblin"],
-    "description": "You hear incantations"
-    }
+    "spells": ["plague_spawn", "summon_plagued_goblin"]
+  }
 }

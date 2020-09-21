@@ -1,3 +1,17 @@
+09-21-2020
+- Add healing berries and restricted the spawn of all other items - Done
+- Balance increase amount of entities for each map - Not feasible yet
+- Create "Switch" map object for Yendor Castle Outer.
+    - Create lever map objects that are interactable - Done
+    - Create game event to track (1) or (2) levers to open room to next level - Done
+- Generate 5th Level for Inner Castle w/ Throne Room Boss fight
+    - Maze with Rooms Level - Done
+    - Create boss fight
+- Added cool down/duration functions and requirements for each spell - Done
+- Added more spells - Done
+- No functionality to spells yet
+
+
 09-14-2020
 - Implement Impact Techniques - Done
     - Side Impact, Spin Impact, Far Impact, Blast Impact, Dragon's Breath Impact - Done
@@ -35,5 +49,3 @@
  - Fixed River Gen x/y coordinates for Resinfaire Forest - Done
  - Healing potions heal max hp - Done
  - Enable bridges across unpassable rivers - Done
-
-

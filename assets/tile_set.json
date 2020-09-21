@@ -891,6 +891,39 @@
     "transparent": false,
     "fov": false,
     "tile_cost": 2
+  },
+  "53": {
+    "name": "Lever(Closed)",
+    "name2": "lever",
+    "type": "object",
+    "char": 95,
+    "glyph": "_",
+    "color": [158, 134, 100],
+    "fov_char": 95,
+    "spawn_chance": 0,
+    "breakable": false,
+    "movable": false,
+    "walkable": false,
+    "transparent": true,
+    "fov": true,
+    "interact_function": "already_toggle_switch",
+    "tile_cost": 0
+  },
+  "54": {
+    "name": "Lever(Open)",
+    "name2": "lever",
+    "type": "object",
+    "char": 124,
+    "glyph": "|",
+    "color": [191, 191, 0],
+    "fov_char": 124 ,
+    "spawn_chance": 0,
+    "breakable": false,
+    "movable": false,
+    "walkable": false,
+    "transparent": true,
+    "fov": true,
+    "interact_function": "toggle_switch",
+    "tile_cost": 0
   }
-
 }

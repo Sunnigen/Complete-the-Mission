@@ -65,7 +65,7 @@
     "def": 0,
     "att": 1,
     "xp": 50,
-    "spawn_chance": [[10, 2], [0, 3]],
+    "spawn_chance": [[100, 1], [0, 3]],
     "mob_level": 2,
     "fov_range": 9,
     "spells": ["mend", "thorn_spike"]
@@ -79,7 +79,7 @@
     "def": 0,
     "att": 2,
     "xp": 50,
-    "spawn_chance": [[0, 3], [20, 3]],
+    "spawn_chance": [[0, 1], [20, 3]],
     "mob_level": 2,
     "fov_range": 9,
     "spells": ["mend", "spirit_sight"]
@@ -94,9 +94,9 @@
     "att": 1,
     "xp": 50,
     "spawn_chance": [[30, 1], [0, 3]],
-    "mob_level": 2,
+    "mob_level": 1,
     "fov_range": 9,
-    "inventory": ["healing_potion"]
+    "inventory": ["berry"]
   },
   "plague_goblin": {
     "name": "Plague Goblin",

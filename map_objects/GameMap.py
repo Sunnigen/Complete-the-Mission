@@ -8,14 +8,13 @@ from tcod.map import Map
 from level_generation.GenericDungeon import generic_dungeon
 from level_generation.UndergravePrison import UndergravePrison
 from level_generation.ResinfaireForest import ResinFaireForest
-from level_generation.YendorCastle import YendorCastle
-from level_generation.GenerationUtils import place_tile
+from level_generation.YendorCastleOuter import YendorCastleOuter
+from level_generation.YendorCastleInner import YendorCastleInner
 from level_generation.Overworld import Overworld
 from level_generation.RandomWalk import RandomWalkAlgorithm
 from level_generation.Tunneling import TunnelingAlgorithm
 from loader_functions.JsonReader import obtain_item_table, obtain_mob_table, obtain_tile_set
 from GameMessages import Message
-
 
 
 # LEVEL_GENERATION = [BSPTreeAlgorithm, CellularAutomataAlgorithm, RandomWalkAlgorithm, TunnelingAlgorithm]
@@ -146,7 +145,6 @@ class GameMap(Map):
         #     self.initialize_closed_map()
         #     self.map = choice(LEVEL_GENERATION)()
         #     self.level = 'Dungeon'
-        # self.dungeon_level += 1
         if self.dungeon_level == 1:
             self.level_message = "You begin your journey to the Castle of Yendor.\n\nThe tales of its plagued forest, massacred-crazed townsfolk and corrupt King perplex you.\n\nIt's time to find out what happened."
             self.default_tile = 13
@@ -181,12 +179,22 @@ class GameMap(Map):
             self.level_message = "You enter Resinfaire Castle\n\nYou feel darkness envelops you as you hear faint voices and make out figures in the distance. They haven't noticed your arrival yet.\n\nIt's time to get revenge."
             self.default_tile = 52
             self.initialize_closed_map()
-            self.map = YendorCastle()
-            self.level = 'yendor castle'
+            self.map = YendorCastleOuter()
+            self.level = 'yendor castle inner'
             mob_table = obtain_mob_table("yendor_1_mobs")
             item_table = obtain_item_table()
             map_width = 55
             map_height = 55
+        elif self.dungeon_level == 5:
+            self.level_message = "You feel the eyes of the entire castle, are fastened on you.\n\nYou peer into the darkness ready for the onslaught of corrupted knights coming your way.\n\nIt's time to get revenge."
+            self.default_tile = 52
+            self.initialize_closed_map()
+            self.map = YendorCastleInner()
+            self.level = 'yendor castle inner'
+            mob_table = obtain_mob_table("yendor_1_mobs")
+            item_table = obtain_item_table()
+            map_width = 60
+            map_height = 60
         else:
             self.level_message = "The journey continues. You clench your weapon tightly and trudge forward."
             self.default_tile = 1

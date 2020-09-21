@@ -51,7 +51,7 @@ def render_viewport(console, mouse_pos, mouse_targets, game_map, entities, fov_m
                 1 // (abs(x + 1) + x + 1)
                 tile = game_map.tileset_tiles[y][x]
                 visible = fov_map.fov[x][y]  # Check if tile is visible at (x, y)
-                enemy_fov = enemy_fov_map[y][x]  # Check if tile is visible to enemy at (x, y)
+                # enemy_fov = enemy_fov_map[y][x]  # Check if tile is visible to enemy at (x, y)
                 walkable = not game_map.walkable[y][x]
                 explored = game_map.explored[y][x]
             except:
@@ -64,24 +64,24 @@ def render_viewport(console, mouse_pos, mouse_targets, game_map, entities, fov_m
                 # print(len(game_map.tileset_tiles), len(game_map.tileset_tiles))
                 tile = default_tile
                 visible = False
-                enemy_fov = False
+                # enemy_fov = False
                 walkable = False
                 explored = True
 
                 # sys.exit()
 
-
             # wall = not game_map.walkable[y][x]  # Check if tile is a wall at (x, y)
-            enemy_fov = False
             # Add Highlight to Entity and Entity's FOV
-            lerp_val = 0.5 * toggle_reveal_all * enemy_fov * walkable
+            enemy_fov = False
+            lerp_val = 0.5 * enemy_fov * walkable
             # print('lerp_val:', lerp_val)
                 # if (x, y) in room_centers:
                 #     tile = 3
             tile_fg_color = game_map.tile_set[str(tile)].get('fg_color', tcod.white)
 
             # Select Tile
-            # visible = True
+            if toggle_reveal_all:
+                visible = True
             if visible:
                 tile_color = game_map.tile_set[str(tile)].get('color')
                 tile_char = game_map.tile_set[str(tile)].get('glyph')

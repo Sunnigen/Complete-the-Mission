@@ -14,6 +14,7 @@ def picture(console, game_map, dungeon_map, header, map_width, map_height, scree
     map_height = game_map.map.height
     window = tcod.console_new(map_width, map_height)
 
+    # print('width/height : ', map_width, map_height)
     dungeon_map.blit_2x(window, 0, 0, 0, 0, -1, -1)
 
     # blit the contents of "window" to the root console

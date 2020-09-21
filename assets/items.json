@@ -1,4 +1,18 @@
 {
+  "berry": {
+    "name": "Healing Berry",
+    "char": 33,
+    "glyph": "*",
+    "color": [255, 191, 0],
+    "type": "consumable",
+    "equippable": false,
+    "amount": 20,
+    "use_function": "heal",
+    "spawn_chance": 75,
+    "item_level": 1,
+    "unique": false,
+    "description": "A berry of choice for most travelers as a light-nutritious-snack."
+  },
   "healing_potion": {
     "name": "Healing Potion",
     "char": 33,
@@ -9,8 +23,8 @@
     "amount": 40,
     "use_function": "heal",
     "spawn_chance": 25,
-    "item_level": 1,
-    "unique": false,
+    "item_level": 3,
+    "unique": true,
     "description": "A potion containing green liquid. Most likely a healing potion."
   },
   "poison_vial": {
@@ -24,7 +38,7 @@
     "use_function": "poison",
     "spawn_chance": 25,
     "item_level": 1,
-    "unique": false,
+    "unique": true,
     "description": "A potion containing a bright green liquid. Maybe it's a healing potion?"
   },
 
@@ -102,8 +116,8 @@
     "targeting_type": "area",
     "targeting": true,
     "targeting_message": "Left-click an open spot to teleport there, or press ESC to cancel.",
-    "spawn_chance": 1,
-    "item_level": 1,
+    "spawn_chance": 25,
+    "item_level": 3,
     "unique": false,
     "description": "A lightly-flamed crystal. You glean a familiar location from its reflection."
   },
@@ -126,6 +140,20 @@
     "unique": false,
     "description": "Looks to contain a powder of some sort. It hurts your eyes even looking at it!"
   },
+  "short_sword": {
+    "name": "Short Sword",
+    "char": 47,
+    "glyph": "/",
+    "color": [222, 211, 195],
+    "type": "equip",
+    "equippable": true,
+    "attack": 1,
+    "slot": "EquipmentSlots.MAIN_HAND",
+    "spawn_chance": 6,
+    "item_level": 100,
+    "unique": false,
+    "description": "The usual-weapon-of-choice for any sword-bearing-fighter."
+  },
 
   "iron_sword": {
     "name": "Iron Sword",
@@ -137,7 +165,7 @@
     "attack": 7,
     "slot": "EquipmentSlots.MAIN_HAND",
     "spawn_chance": 6,
-    "item_level": 4,
+    "item_level": 100,
     "unique": false,
     "description": "The usual-weapon-of-choice for any sword-bearing-fighter."
   },
@@ -152,7 +180,7 @@
     "attack": 1,
     "slot": "EquipmentSlots.MAIN_HAND",
     "spawn_chance": 1,
-    "item_level": 1,
+    "item_level": 100,
     "unique": false,
     "description": "A weak but quick, solution to any hand-to-hand combat."
   },
@@ -254,7 +282,7 @@
     "defense": 2,
     "slot": "EquipmentSlots.CHEST",
     "spawn_chance": 7,
-    "item_level": 1,
+    "item_level": 100,
     "unique": false,
     "description": "Standard guard body armor, lightweight and maneuverable, while offering rudimentary protection around the chest and stomach.",
     "note": "https://www.medievalarmour.com/medieval-helmets-2#/pageSize=12&orderBy=0"
@@ -269,7 +297,7 @@
     "defense": 1,
     "slot": "EquipmentSlots.HEAD",
     "spawn_chance": 5,
-    "item_level": 1,
+    "item_level": 100,
     "unique": false,
     "description": "The most basic of head protection. Covers the head and as slotted frontwards for sight."
   },
@@ -283,7 +311,7 @@
     "defense": 2,
     "slot": "EquipmentSlots.LEGS",
     "spawn_chance": 5,
-    "item_level": 1,
+    "item_level": 100,
     "unique": false,
     "description": "Full leather coverage on the legs while still able to maneuver on the battlefield or indoors."
   },
@@ -297,7 +325,7 @@
     "defense": 1,
     "slot": "EquipmentSlots.LEGS",
     "spawn_chance": 5,
-    "item_level": 1,
+    "item_level": 100,
     "unique": false,
     "description": "Slight leather coverage on the waist and thigh. Nothing much for the rest of the legs however."
   },
@@ -312,7 +340,7 @@
     "dex": 1,
     "slot": "EquipmentSlots.HANDS",
     "spawn_chance": 5,
-    "item_level": 1,
+    "item_level": 100,
     "unique": false,
     "description": "Basic protection while still increasing swinging dexterity."
   },
@@ -327,7 +355,7 @@
     "dex": -1,
     "slot": "EquipmentSlots.FEET",
     "spawn_chance": 5,
-    "item_level": 1,
+    "item_level": 100,
     "unique": false,
     "effect": ["no slip"],
     "description": "A pair of leather boots.\nThe padded traction help footwork even on slippery surfaces, otherwise clunky."
@@ -343,7 +371,7 @@
     "dex": -2,
     "slot": "EquipmentSlots.CHEST",
     "spawn_chance": 75,
-    "item_level": 20,
+    "item_level": 100,
     "unique": true,
     "effect": [],
     "description": "Imperial-grade chain mail armor. Can allow wearer to withstand strong blows while operating around the battlefield."
@@ -359,7 +387,7 @@
     "dex": -2,
     "slot": "EquipmentSlots.HEAD",
     "spawn_chance": 75,
-    "item_level": 20,
+    "item_level": 100,
     "unique": true,
     "effect": ["arrow guard"],
     "description": "Imperial-grade chain mail armor. Just by pure intimidation alone, anyone wearing this is a force to be reckoned with."
@@ -375,7 +403,7 @@
     "dex": -2,
     "slot": "EquipmentSlots.LEGS",
     "spawn_chance": 75,
-    "item_level": 20,
+    "item_level": 100,
     "unique": true,
     "effect": ["arrow guard"],
     "description": "Imperial-grade chain mail leggings. Strong enough to withstand any attempt to the legs. Best to try elsewhere."
@@ -387,7 +415,7 @@
     "color": [255, 166, 166],
     "type": "equip",
     "equippable": true,
-    "attack": 10,
+    "attack": 100,
     "range": 1.5,
     "slot": "EquipmentSlots.MAIN_HAND",
     "spawn_chance": 75,
@@ -406,7 +434,7 @@
     "defense": 10,
     "slot": "EquipmentSlots.OFF_HAND",
     "spawn_chance": 75,
-    "item_level": 20,
+    "item_level": 100,
     "unique": true,
     "effect": ["block", "arrow_guard"],
     "description": "Tales of this shield ranges from holding many a war-front to withstanding golems. This imperial-grade shield makes a solid companion,"
@@ -442,7 +470,7 @@
     "color": [191, 151, 96],
     "type": "equip",
     "spawn_chance": 5,
-    "item_level": 4,
+    "item_level": 100,
     "equippable": true,
     "attack": 5,
     "range": 1.5,
