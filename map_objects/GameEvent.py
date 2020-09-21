@@ -64,13 +64,16 @@ class GameEvent:
                     print('Error! Coudn\'t find open spawn point for {} at ({}, {})'.format(mob_stats.get('name'), spawn_x, spawn_y))
                 # (x, y, mob_stats, mob_index, encounter_group, faction, ai, entities, dialogue_component=None):
         elif self.event_type == 'open_gate':
+            # print('event_type:', self.event_type)
             map_objects = self.function_kwargs.get('map_objects')
+            default_floor_tile = self.function_kwargs.get('default_floor_tile', "2")
 
             for map_object in map_objects:
+                # print('removing : ', map_object)
                 self.game_map.map_objects.remove(map_object)
-                place_tile(self.game_map, map_object.position.x, map_object.position.y, "2")
+                place_tile(self.game_map, map_object.position.x, map_object.position.y, default_floor_tile)
                 # results.append({"change_map_object": [map_object, 2], "message": Message("The {} has opened!".format(map_object.name))})
-                results.append({"message": Message("The {} has opened!".format(map_object.name))})
+            results.append({"message": Message("The {} has opened!".format(map_object.name))})
 
         return results
 
@@ -84,18 +87,39 @@ class GameEvent:
     #                        faction='Imperials', 'ai_type'=AI,' area_of_interest'
 
 
+def tile_index_at_position_condition(condition_kwargs):
+    # print('tile index at position condition')
+    # Condition to check if a tile at a certain position has been changed into another type of tile
+    # return True if tile index is the same
+    check_tile_index = condition_kwargs.get('tile_index')
+    lever_entities = condition_kwargs.get("lever_entities")
+    condition_met = True
+    for lever_entity in lever_entities:
+        # print(lever_entity.json_index)
+        if lever_entity.json_index != check_tile_index:  # Check if Lever(Closed) json_iondex("53")
+            condition_met = False
+    # print('condition_met : ', condition_met)
+    return condition_met
+
+
 def entity_at_position_condition(condition_kwargs):
+    # Check if entity's position is at a specific location
+    # return True if entity's position is within area
     entity = condition_kwargs.get('entity')
     x_start, x_end, y_start, y_end = condition_kwargs.get('area_of_interest')
     return x_start <= entity.position.x <= x_end and y_start <= entity.position.y <= y_end
 
 
 def turn_count_condition(condition_kwargs):
+    # Check Turn Condition Count
+    # return True if turn count exceeds given turn count
     game_map = condition_kwargs.get("game_map")
     turn_count = condition_kwargs.get("turn_count")
     return game_map.turn_count >= turn_count
 
 
 def check_entity_dead(condition_kwargs):
+    # Check if Entity is alive or dead
+    # return True if Entity's Render order has been changed to "CORPSE"
     target_entity = condition_kwargs.get("target_entity")
     return target_entity.render_order == RenderFunctions.RenderOrder.CORPSE

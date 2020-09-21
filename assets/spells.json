@@ -1,16 +1,18 @@
 {
   "spirit_sight": {
     "name": "Spirit Sight",
+    "type": ["buff"],
     "cool_down": 20,
     "cost": 5,
     "value": 0,
     "range": 5,
     "description": "Enables user to feel the presence of other entities through walls",
-    "spell_function": "cast_thorn_spike",
+    "spell_function": "cast_spirit_sight",
     "targeting": false
   },
   "mend": {
     "name": "Mend",
+    "type": ["restorative"],
     "cool_down": 10,
     "cost": 5,
     "description": "Heal user immediately and slowly overtime.",
@@ -20,6 +22,7 @@
 
   "thorn_spike": {
     "name": "Thorn Spike",
+    "type": ["offensive"],
     "cool_down": 10,
     "cost": 5,
     "value": 3,
@@ -30,12 +33,53 @@
     "targeting_message": "Select a target to launch spikes at."
   },
   "plague_touch": {
-    "name": "Plague Touch"
+    "name": "Plague Touch",
+    "type": ["offensive"],
+    "cool_down": 10,
+    "cost": 0,
+    "value": 0,
+    "range": 1,
+    "description": "Adds ability to infect target on attack.",
+    "spell_function": "cast_plague_touch"
   },
   "holy_strike": {
-    "name": "Holy Strike"
+    "name": "Holy Strike",
+    "type": ["offensive"],
+    "cool_down": 10,
+    "cost": 0,
+    "value": 2,
+    "range": 1,
+    "description": "Strike down your enemy with holy light!",
+    "spell_function": "cast_holy_strike"
   },
   "plague_bite": {
-    "name": "Plague Bite"
+    "name": "Plague Bite",
+    "type": ["offensive"],
+    "cool_down": 10,
+    "cost": 0,
+    "value": 1,
+    "range": 1,
+    "description": "Bite! Bite hard! An infectious bite.",
+    "spell_function": "cast_plague_bite"
+  },
+  "plague_growth": {
+    "name": "Plague Growth",
+    "type": ["environment", "offensive"],
+    "cool_down": 2,
+    "cost": 10,
+    "value": 0,
+    "range": 5,
+    "description": "Randomly infect an area area (2) turns with an unavoidable puddle of goop. Will infect target at area.",
+    "spell_function": "cast_plague_growth"
+  },
+  "summon_plagued_goblin": {
+    "name": "Summon Plagued Goblin",
+    "type": ["environment", "offensive"],
+    "cool_down": 3,
+    "cost": 10,
+    "value": 0,
+    "range": 5,
+    "description": "Summon a plague goblin to attack nearby enemies.",
+    "spell_function": "cast_plague_goblin"
   }
 }

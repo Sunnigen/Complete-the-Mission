@@ -104,5 +104,9 @@
                  49, 49, 49, 49, 49
 
     ]
+  },
+  "impact_statue": {
+    "name": "Statue",
+    "width": 3
   }
 }

@@ -41,15 +41,16 @@ def read(*args, **kwargs):
 
 def heal(*args, **kwargs):
     entity = args[0]
+    print('heal:', args, kwargs)
     amount = kwargs.get('amount')
 
-    results = [{'consumed': True, "spawn_particle": ["heal", entity.position.x, entity.position.y, None], 'message': Message('You drink the vial...', tcod.yellow)}]
+    results = [{'consumed': True, "spawn_particle": ["heal", entity.position.x, entity.position.y, None], 'message': Message('You consume the berry ...'.format(entity.name), tcod.yellow)}]
 
     if entity.fighter.hp >= entity.fighter.max_hp:
         results.append({'message': Message('But you don\'t feel any different.', tcod.yellow)})
     else:
         entity.fighter.heal(entity.fighter.max_hp)
-        results.append({'message': Message('Your wounds start to feel better.', tcod.green)})
+        results.append({'message': Message('You regain some health.', tcod.green)})
 
     return results
 

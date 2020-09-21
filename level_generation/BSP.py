@@ -301,7 +301,7 @@ class BinarySpacePartition(BSP):
             for y in range(room.y + wall_buffer + 1, room.y + room.height - wall_buffer):
                 self.grid[x][y] = 0
 
-    def obtain_point_within(self, padding=3):
+    def obtain_point_within(self, room, padding=3):
         raise AttributeError
 
 

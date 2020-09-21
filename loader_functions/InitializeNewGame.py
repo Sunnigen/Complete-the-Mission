@@ -112,7 +112,7 @@ def get_game_variables(constants, level=None):
         # starting_equipment = ['map', 'imperial_longsword', 'imperial_chainmail_leggings', 'imperial_chainmail_coif',
         #                       'imperial_chainmail_hauberk', 'imperial_battle_shield', 'teleport_crystal', 'blind_powder', 'confusion_scroll', 'lightning_scroll', 'fireball_scroll', 'poison_vial']
         # starting_equipment = ['map', 'dagger', 'fireball_scroll','fireball_scroll', 'lightning_scroll', 'lightning_scroll', 'lightning_scroll', 'lightning_scroll', 'master_key']
-        starting_equipment = ['map','dagger', 'healing_potion', 'healing_potion']
+        starting_equipment = ['map','short_sword', 'healing_potion', 'healing_potion']
         for item_index in starting_equipment:
             item_entity = create_item_entity(item_index)
             player.inventory.add_item(item_entity)
@@ -121,7 +121,7 @@ def get_game_variables(constants, level=None):
 
     # Initiatize Map
     # TODO: Change game_map into a Map variable containing all the entities and tiles. All tiles are not transparent
-    game_map = GameMap(constants['map_width'], constants['map_height'], dungeon_level=1)
+    game_map = GameMap(constants['map_width'], constants['map_height'], dungeon_level=4)
     game_map.make_map(constants['max_rooms'], constants['room_min_size'], constants['room_max_size'],
                       constants['map_width'], constants['map_height'], player, entities, particles, particle_systems,
                       encounters=encounters, level=level)
