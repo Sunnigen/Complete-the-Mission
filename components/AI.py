@@ -6,7 +6,7 @@ from GameMessages import Message
 from loader_functions.JsonReader import obtain_mob_table
 from map_objects.GameMapUtils import get_map_object_at_location
 
-from SpellFunctions import cast_mend, cast_thorn_spike, no_spell
+# from SpellFunctions import cast_mend, cast_thorn_spike, no_spell
 
 MOBS = obtain_mob_table()
 
@@ -136,7 +136,7 @@ class AI:
                     target = None
 
                 if spell_to_cast:
-                    results.extend(self.owner.spellcaster.cast(spell_to_cast, target=target))
+                    results.extend(self.owner.spellcaster.cast(spell_to_cast, caster=self.owner, target=target))
                     return results
 
 
@@ -166,7 +166,9 @@ class AI:
         if (self.current_target and not self.path) or \
                 (self.last_target_position and not self.path) or \
                 (self.current_target and not (target_y, target_x) in self.path):
-            self.path = mob.position.move_astar(target_x, target_y, game_map)
+
+            self.path = mob.position.movement_function(target_x, target_y, game_map, )
+            # self.path = mob.position.move_astar(target_x, target_y, game_map)
 
         # Move Entity to Next Floor if Seeking
         if self.encounter.main_target == game_map.stairs and \
@@ -182,14 +184,15 @@ class AI:
             results.append({'message': Message('{} ascended to the next level!'.format(self.owner.name))})
 
         # Finally Move
-        if self.path:
+        if len(self.path) > 0:
             results.extend(self.move_on_path(game_map, entities, results))
             self.direction_vector = get_direction(self.owner.position.x, self.owner.position.y, target_x, target_y)
 
         return results
 
     def move_on_path(self, game_map, entities, results):
-        # print('\n\nmove_on_path')
+        print('\n\nmove_on_path')
+        print(self.path)
         mob = self.owner
         y, x = self.path[0]
         self.direction_vector = get_direction(self.owner.position.x, self.owner.position.y, x, y)

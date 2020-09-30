@@ -5,6 +5,7 @@ from random import choice
 import tcod as libtcod
 from tcod.map import Map
 
+from level_generation.Arena import Arena
 from level_generation.GenericDungeon import generic_dungeon
 from level_generation.UndergravePrison import UndergravePrison
 from level_generation.ResinfaireForest import ResinFaireForest
@@ -145,14 +146,27 @@ class GameMap(Map):
         #     self.initialize_closed_map()
         #     self.map = choice(LEVEL_GENERATION)()
         #     self.level = 'Dungeon'
-        if self.dungeon_level == 1:
+        print('self.dungeon_level:', self.dungeon_level, self.dungeon_level == 0)
+        if self.dungeon_level == 0:
+            self.level_message = "Arena Level"
+            self.default_tile = 1
+            self.initialize_closed_map()
+            self.map = Arena()
+            self.level = 'arena'
+            mob_table = {**obtain_mob_table("resinfaire_mobs"), **obtain_mob_table("yendor_1_mobs"), **obtain_mob_table("yendor_2_mobs")}
+            # for mob, stats in mob_table.items():
+            #     print(mob, stats)
+            map_width = 30
+            map_height = 30
+            item_table = obtain_item_table()
+        elif self.dungeon_level == 1:
             self.level_message = "You begin your journey to the Castle of Yendor.\n\nThe tales of its plagued forest, massacred-crazed townsfolk and corrupt King perplex you.\n\nIt's time to find out what happened."
             self.default_tile = 13
             self.initialize_closed_map()
             self.map = ResinFaireForest()
             self.level = 'resinfaire'
             mob_table = obtain_mob_table("resinfaire_mobs")
-            map_width = 30
+            map_width = 45
             map_height = 45
             item_table = obtain_item_table()
         elif self.dungeon_level == 2:
@@ -191,7 +205,7 @@ class GameMap(Map):
             self.initialize_closed_map()
             self.map = YendorCastleInner()
             self.level = 'yendor castle inner'
-            mob_table = obtain_mob_table("yendor_1_mobs")
+            mob_table = obtain_mob_table("yendor_2_mobs")
             item_table = obtain_item_table()
             map_width = 60
             map_height = 60

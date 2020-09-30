@@ -15,6 +15,7 @@
     "type": ["restorative"],
     "cool_down": 10,
     "cost": 5,
+    "value": 1,
     "description": "Heal user immediately and slowly overtime.",
     "spell_function": "cast_mend",
     "targeting": false

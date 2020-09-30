@@ -50,7 +50,12 @@ def get_blocking_entities_at_location(entities, target_x, target_y, origin_x, or
             # Rotate Matrix for Correct Target Locations
             mat = technique_dict.get("straight")
             num_of_rotations = straight_vars.get((opposite_x, opposite_y))
-        mat = np.rot90(mat, k=num_of_rotations, axes=(1, 0))
+        try:
+            mat = np.rot90(mat, k=num_of_rotations, axes=(1, 0))
+        except TypeError:
+            print("TypeError for matrix : ")
+            print("k : ", num_of_rotations)
+            print("mat : ", mat)
 
         # Find Coordinates for Beginning of Target Matrix
         dist_to_center = technique_dict.get("center")
@@ -86,25 +91,27 @@ def get_blocking_entities_at_location(entities, target_x, target_y, origin_x, or
     # print('targetable_positions:', targetable_positions)
 
     # Check if Entity is "Blocking" at X, Y Location Specified
-    main_target = None
+    main_target = []
     targetable_entities = []
     for entity in entities:
 
         # Place Main Target to front
-        if entity.blocks and (entity.position.x, entity.position.y) == (target_x, target_y):
-            main_target = entity
+        if entity.blocks and (entity.position.x, entity.position.y) == (target_x, target_y) and entity.name != "Player":
+            main_target = [entity]
             continue
 
         if entity.blocks and (entity.position.x, entity.position.y) in targetable_positions:
             targetable_entities.append(entity)
             targetable_positions.remove((entity.position.x, entity.position.y))
 
-    if not main_target:
-        return [], targetable_entities
+    # if not main_target:
+    #     return [], targetable_positions
 
     # Return targetted entities and all rest of tiles
-    print('Technique Used:', technique_name)
-    return [main_target] + targetable_entities, targetable_positions
+    # print('Technique Used:', technique_name)
+    # print("[main_target] + targetable_entities:", [main_target] + targetable_entities)
+    # print("targetable_positions:", targetable_positions)
+    return main_target + targetable_entities, targetable_positions
 
 
 def get_map_object_at_location(map_objects, destination_x, destination_y):
