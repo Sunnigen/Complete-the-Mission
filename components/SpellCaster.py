@@ -110,6 +110,6 @@ class SpellCaster:
         # Return True if Spellcaster has any spells that aren't on cool down and aren't active
         return any([spell.is_ready for spell in self.spells])
 
-    def cast(self, spell, **kwargs):
+    def cast(self, spell, caster, target, **kwargs):
         spell.activate()
-        return spell.spell_function(kwargs)
+        return spell.spell_function(caster=caster, target=target, spell=spell, **kwargs)

@@ -262,7 +262,7 @@ class Game(Controller):
                     self.entities, destination_x, destination_y, self.player.position.x, self.player.position.y,
                     technique_name=tech)
 
-
+                # print("# Attack Entity or Move")
                 # print("targets: ", targets)
                 # Attack Entity or Move
                 if targets:
@@ -306,6 +306,96 @@ class Game(Controller):
                             self.player_turn_results.append({"spawn_particle": ["hit_blank", x, y, None]})
 
                 else:
+                    # Check for Strafe Slashes
+                    # print('# Check for Strafe Slashes')
+                    # tech = "side_impact"
+                    # side_x, side_y = None, None
+                    # if dy == 0:
+                    #     side_x = self.player.position.x + 1
+                    #     side_y = destination_y + 1
+                    # elif dx == 0:
+                    #     side_x = destination_x + 1
+                    #     side_y = self.player.position.y + 1
+                    # print('\ndx/dy : ', dx, dy)
+                    # print("side : ", side_x, side_y)
+
+                    """
+                    # Move downright
+                    dx = 1
+                    dy = 1
+                    
+                    # Move downleft
+                    dx = -1
+                    dy = 1
+                                        
+                    # Move Topleft
+                    dx = -1
+                    dy = -1
+                    
+                                                            
+                    # Move Topright
+                    dx = 1
+                    dy = -1
+                    """
+
+
+                    # if side_x or side_y:
+                    #     # tech = choice(["side_impact", "spin_impact", "far_impact", "blast_impact","dragons_breath_impact", None])
+                    #     targets, targetted_spaces = get_blocking_entities_at_location(
+                    #         self.entities, destination_x, destination_y, side_x, side_y, technique_name=tech)
+                    #
+                    #     if targets:
+                    #
+                    #         # Check if Non Attackable Entity
+                    #
+                    #         # elif not self.player.faction.check_ally(target.faction.faction_name):
+                    #
+                    #         main_target = targets[0]
+                    #         if not self.player.faction.check_enemy(main_target.faction.faction_name):
+                    #             # Ally
+                    #             # Switch Player with Entity, if Entity is Following Player
+                    #             if isinstance(main_target.ai, FollowAI):
+                    #                 if main_target.ai.follow_entity == self.player:
+                    #                     old_x, old_y = self.player.position.x, self.player.position.y
+                    #                     new_x, new_y = main_target.position.x, main_target.position.y
+                    #                     self.player.position.x, self.player.position.y = new_x, new_y
+                    #                     main_target.position.x, main_target.position.y = old_x, old_y
+                    #                     self.game_state = GameStates.ENEMY_TURN
+                    #
+                    #             else:
+                    #                 self.dialogue(main_target)
+                    #
+                    #         # Attack Enemies
+                    #         for target in targets:
+                    #             # Check if Entity Faction
+                    #             if self.player.faction.check_enemy(target.faction.faction_name):
+                    #                 # Enemy
+                    #                 attack_results = self.player.fighter.attack(target)
+                    #                 self.player_turn_results.extend(attack_results)
+                    #                 # self.game_state = GameStates.ENEMY_TURN
+                    #
+                    #         # else:
+                    #         # Neutral
+                    #         # self.player_turn_results.extend([{'message': Message('You bump into a %s.' % target.name)}])
+                    #         # self.game_state = GameStates.ENEMY_TURN
+                    #         # Spawn Hit Particles for Non-Target Spaces
+                    #     print("targetted_spaces : ", targetted_spaces)
+                    #     for (x, y) in targetted_spaces:
+                    #         if not self.game_map.is_blocked(x, y) and (x, y) in self.player.fighter.curr_fov_map:
+                    #             self.player_turn_results.append({"spawn_particle": ["hit_blank", x, y, None]})
+
+
+
+
+
+
+
+
+
+
+
+
+
                     self.game_map.tile_cost[self.player.position.y][self.player.position.x] = TILE_SET.get("%s" % self.game_map.tileset_tiles[self.player.position.y][self.player.position.x]).get('tile_cost')
                     # self.update_mouse_pos(dx, dy)
                     self.player.position.move(dx, dy)
@@ -916,7 +1006,7 @@ class Game(Controller):
         print('initialize_game : ', level)
         # Initialize Game Variables
         self.player, self.entities, self.particles, self.particle_systems, self.game_map, self.message_log, \
-            self.game_state = get_game_variables(CONSTANTS, level=level)
+            self.game_state, dungeon_level = get_game_variables(CONSTANTS, level=level)
         self.panel = tcod.console.Console(CONSTANTS['screen_width'], CONSTANTS['panel_height'])
         self.top_panel = tcod.console.Console(CONSTANTS['screen_width'], CONSTANTS['top_gui_height'])
         self.event_panel = tcod.console.Console(CONSTANTS['viewport_width'] * 2, CONSTANTS['viewport_height'] * 2)
@@ -925,7 +1015,11 @@ class Game(Controller):
         self.fov_recompute = True
         self.fov_map = initialize_fov(self.game_map)
         self.enemy_fov_map = np.zeros(self.fov_map.transparent.shape, dtype=bool)
-        self.reveal_all = 0
+        print("level : ", level)
+        if dungeon_level == 0:  # arena level
+            self.reveal_all = 1
+        else:
+            self.reveal_all = 0
         self.previous_game_state = self.game_state
         self.targeting_item = None
         self.alert_mode = AlertEnum.NORMAL
@@ -1401,8 +1495,8 @@ class Game(Controller):
                                    clear=False, bg_blend=tcod.BKGND_DEFAULT)
 
         # Display Character Level
-        self.side_panel.print(CONSTANTS['bar_width'] // 2 + 1, 1, "{}".format(self.alert_mode),
-                              fg=tcod.light_gray, bg_blend=tcod.BKGND_NONE, alignment=tcod.CENTER)
+        # self.side_panel.print(CONSTANTS['bar_width'] // 2 + 1, 1, "{}".format(self.alert_mode),
+        #                       fg=tcod.light_gray, bg_blend=tcod.BKGND_NONE, alignment=tcod.CENTER)
         # Render HP Bar
         render_bar(self.side_panel, 1, 2, CONSTANTS['bar_width'], 'HP', self.player.fighter.hp,
                    self.player.fighter.max_hp, tcod.light_red, tcod.darker_red)
@@ -1419,8 +1513,16 @@ class Game(Controller):
         self.side_panel.print(1, 6, 'CurrentTurn:{}'.format(self.game_map.turn_count), fg=tcod.light_gray,
                               bg_blend=tcod.BKGND_NONE, alignment=tcod.LEFT)
         # Display Alert Counter
-        self.side_panel.print(1, 7, 'AlertCounter:{}'.format(self.alert_counter), fg=tcod.light_gray,
-                              bg_blend=tcod.BKGND_NONE, alignment=tcod.LEFT)
+        # self.side_panel.print(1, 7, 'AlertCounter:{}'.format(self.alert_counter), fg=tcod.light_gray,
+        #                       bg_blend=tcod.BKGND_NONE, alignment=tcod.LEFT)
+
+        # Dislay Technique Slots
+        self.side_panel.print(2, 11, "1", fg=tcod.white,
+                              bg_blend=tcod.BKGND_NONE, alignment=tcod.CENTER)
+
+        self.side_panel.draw_frame(1, 10, 3, 3, fg=tcod.pink,
+                                   clear=False, bg_blend=tcod.BKGND_DEFAULT)
+
 
         # Terrain Under Mouse Display
         if self.mouse_pos:

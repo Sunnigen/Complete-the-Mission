@@ -8,7 +8,7 @@
     "def": 0,
     "att": 1,
     "xp": 25,
-    "spawn_chance": [[90, 1], [5, 2], [0, 3]],
+    "spawn_chance": [[55, 1], [5, 2], [0, 3]],
     "mob_level": 1,
     "fov_range": 8,
     "description": "A normal-ferocious forest denizen, approach with caution."
@@ -65,9 +65,11 @@
     "def": 0,
     "att": 1,
     "xp": 50,
-    "spawn_chance": [[100, 1], [0, 3]],
+    "spawn_chance": [[10, 1], [0, 3]],
     "mob_level": 2,
     "fov_range": 9,
+    "movement_type": "dijkstra",
+    "minimum_range": 5,
     "spells": ["mend", "thorn_spike"]
   },
   "shaman": {
@@ -77,11 +79,13 @@
     "color": [191, 64, 0],
     "hp": 3,
     "def": 0,
-    "att": 2,
+    "att": 1,
     "xp": 50,
-    "spawn_chance": [[0, 1], [20, 3]],
+    "spawn_chance": [[10, 1], [20, 3]],
     "mob_level": 2,
     "fov_range": 9,
+    "movement_type": "dijkstra",
+    "minimum_dist": 5,
     "spells": ["mend", "spirit_sight"]
   },
   "goblin": {

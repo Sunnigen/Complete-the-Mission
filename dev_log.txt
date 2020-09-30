@@ -1,3 +1,10 @@
+09-22-2020
+- Added Dungeon Level 0 : Arena - Play test area for different mobs/encounters - Done
+- Added Dijkstra movement for casters
+    - Mobs can pathfind to player - Done
+    - Mobs can always maintain a minimum distance from target
+
+
 09-21-2020
 - Add healing berries and restricted the spawn of all other items - Done
 - Balance increase amount of entities for each map - Not feasible yet

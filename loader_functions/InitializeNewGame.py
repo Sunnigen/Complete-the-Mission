@@ -120,8 +120,9 @@ def get_game_variables(constants, level=None):
                 player.equipment.toggle_equip(item_entity)
 
     # Initiatize Map
+    dungeon_level = 0
     # TODO: Change game_map into a Map variable containing all the entities and tiles. All tiles are not transparent
-    game_map = GameMap(constants['map_width'], constants['map_height'], dungeon_level=4)
+    game_map = GameMap(constants['map_width'], constants['map_height'], dungeon_level=dungeon_level)
     game_map.make_map(constants['max_rooms'], constants['room_min_size'], constants['room_max_size'],
                       constants['map_width'], constants['map_height'], player, entities, particles, particle_systems,
                       encounters=encounters, level=level)
@@ -132,4 +133,4 @@ def get_game_variables(constants, level=None):
     # Initialize Game State
     game_state = GameStates.EVENT_MESSAGE
 
-    return player, entities, particles, particle_systems, game_map, message_log, game_state
+    return player, entities, particles, particle_systems, game_map, message_log, game_state, dungeon_level

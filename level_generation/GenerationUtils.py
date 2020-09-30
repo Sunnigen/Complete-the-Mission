@@ -189,7 +189,7 @@ def generate_mob(x, y, mob_stats, mob_index, encounter_group, faction, ai, entit
         spell_data_list = []
         for spell_name in spells:
             spell_data_list.append(SPELLS.get(spell_name))
-        print('name:', mob_stats.get("name"))
+        # print('name:', mob_stats.get("name"))
         spellcaster_component = SpellCaster(spell_data=spell_data_list)
     else:
         spellcaster_component = None
@@ -201,7 +201,7 @@ def generate_mob(x, y, mob_stats, mob_index, encounter_group, faction, ai, entit
         ai_component = ai(encounter=encounter_group, origin_x=x, origin_y=y, follow_entity=follow_entity,
                           target_entity=target_entity)
 
-    position_component = Position(x, y)
+    position_component = Position(x, y, minimum_dist=mob_stats.get("minimum_dist", 1), movement_type=mob_stats.get("movement_type", "astar"))
     mob_entity = Entity(mob_stats.get('glyph'), mob_stats.get('color'), mob_stats.get('name'), mob_index, position=position_component,
                         blocks=True, fighter=fighter_component, render_order=RenderOrder.ACTOR,
                         ai=ai_component, faction=faction_component, equipment=equipment_component,
@@ -563,6 +563,10 @@ def generate_mobs(entities, game_map, number_of_mobs, mobs, monster_chances, enc
 
     monster_list = []
     MOBS = mobs
+
+    print(number_of_mobs)
+    print(mobs)
+
     for i in range(number_of_mobs):
         # Choose A Random Location Within the Room
         if room:
@@ -573,7 +577,7 @@ def generate_mobs(entities, game_map, number_of_mobs, mobs, monster_chances, enc
                 x = randint(room.x, room.x + room.width)
                 y = randint(room.y, room.y + room.height)
 
-
+        print("x, y:", x, y)
         # Ensure another Entity doesn't already Exist in same coordinates
         # _entities = [entity for entity in entities if entity.position]
         if not any([entity for entity in entities if entity.position.x == x and entity.position.y == y]) and \
@@ -593,24 +597,17 @@ def generate_mobs(entities, game_map, number_of_mobs, mobs, monster_chances, enc
     return monster_list
 
 
-def place_entities(game_map, dungeon_level, room, entities, item_table, mob_table):
+def place_entities(game_map, dungeon_level, room, entities, item_table, mob_table, mob_count=None, item_count=None):
 
     # Get a Random Number of Monsters
     max_monsters_per_room = spawn_chance([[2, 1], [3, 4], [5, 6]], dungeon_level)
     max_items_per_room = spawn_chance([[1, 1], [2, 4]], dungeon_level)
-
-    # number_of_mobs = 1
     number_of_mobs = randint(1, max_monsters_per_room)
-
     number_of_items = randint(0, max_items_per_room)
 
     monster_chances = {mob: spawn_chance([stats for stats in mob_stats.get('spawn_chance')], dungeon_level)
                        for mob, mob_stats in mob_table.items()
                        }
-    # object_chances = {object: spawn_chance([[object_stats.get('spawn_chance'), object_stats.get('item_level')]],
-    #                                    dungeon_level) for object, object_stats in object_table.items()
-    #                 }
-
     item_chances = {item: spawn_chance([[item_stats.get('spawn_chance'), item_stats.get('item_level')]],
                                        dungeon_level) for item, item_stats in item_table.items() if not item_stats.get("unique", False)
                     }

@@ -55,6 +55,8 @@
     "spawn_chance": [[50, 4]],
     "mob_level": 4,
     "fov_range": 8,
+    "movement_type": "dijkstra",
+    "minimum_dist": 4,
     "spells": ["summon_plagued_goblin"],
     "description": "You hear incantations"
     }
